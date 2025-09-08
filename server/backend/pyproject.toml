@@ -1,0 +1,31 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.6,<4.0"
+authors = [
+    {name = "DanielRodri87", email = "daniel.acaua.piaui.brasil@gmail.com"}
+]
+dependencies = [
+    "fastapi[standard]>=0.116.1,<0.117.0",
+    "uvicorn>=0.35.0,<0.36.0",
+    "ruff>=0.1.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
+]
+
+[tool.taskipy.tasks]
+run = "fastapi dev backend/app.py"
+pre_format = "ruff check --fix"
+format = "ruff format"
+test = "pytest -s -x --cov=backend -vv"
+post_test = "coverage html"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = '-p no:warnings'
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
