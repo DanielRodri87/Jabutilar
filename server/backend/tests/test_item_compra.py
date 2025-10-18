@@ -2,6 +2,8 @@ from http import HTTPStatus
 from fastapi.testclient import TestClient
 from backend.app import app
 
+from unittest.mock import MagicMock, patch
+
 client = TestClient(app)
 
 # Variável para armazenar o ID do item criado nos testes
@@ -139,3 +141,95 @@ def test_criar_item_sem_campos_opcionais():
     # Limpar item criado
     item_id = response.json()["data"]["id"]
     client.delete(f"/itens-compra/{item_id}")
+
+def test_criar_item_compra_falha_supbase(mock_item_compra_module):
+    """Teste para cobrir 'if not response.data' em criar_item_compra."""
+    mock_item_compra_module.table.return_value.insert.return_value.execute.return_value.data = []
+    
+    novo_item = {"nome": "Teste Falha"}
+    response = client.post("/itens-compra", json=novo_item)
+    
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()["detail"] == "Erro ao criar item de compra"
+
+def test_criar_item_compra_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em criar_item_compra."""
+    mock_item_compra_module.table.return_value.insert.side_effect = Exception("Falha de rede simulada")
+    
+    novo_item = {"nome": "Teste Excecao"}
+    response = client.post("/itens-compra", json=novo_item)
+    
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Falha de rede simulada" in response.json()["detail"]
+
+def test_listar_itens_compra_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em listar_itens_compra."""
+    mock_item_compra_module.table.return_value.select.side_effect = Exception("Falha de DB simulada")
+    
+    response = client.get("/itens-compra")
+    
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Falha de DB simulada" in response.json()["detail"]
+
+def test_obter_item_compra_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em obter_item_compra."""
+    
+    # Faz com que a chamada final .execute() dispare a exceção
+    mock_item_compra_module.table.return_value.select.return_value.eq.return_value.execute.side_effect = Exception("Erro de leitura") 
+    
+    response = client.get("/itens-compra/999")
+    
+    # Agora a rota deveria capturar a exceção e retornar 500
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Erro de leitura" in response.json()["detail"]
+
+def test_atualizar_item_compra_falha_supabase(mock_item_compra_module):
+    """Teste para cobrir 'if not response.data' em atualizar_item_compra (erro 400)."""
+    # 1. Simula que o item existe (passa no check)
+    # 2. Simula que a atualização falhou (retorna data vazia)
+    mock_item_compra_module.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [{"id": 999}]
+    mock_item_compra_module.table.return_value.update.return_value.eq.return_value.execute.return_value.data = []
+    
+    response = client.put("/itens-compra/999", json={"nome": "Teste"})
+    
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()["detail"] == "Erro ao atualizar item de compra"
+
+def test_atualizar_item_compra_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em atualizar_item_compra."""
+    mock_item_compra_module.table.return_value.select.side_effect = Exception("Falha de escrita")
+    
+    response = client.put("/itens-compra/999", json={"nome": "Teste"})
+    
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Falha de escrita" in response.json()["detail"]
+
+def test_deletar_item_compra_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em deletar_item_compra."""
+    mock_item_compra_module.table.return_value.select.side_effect = Exception("Falha de exclusão")
+    
+    response = client.delete("/itens-compra/999")
+    
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Falha de exclusão" in response.json()["detail"]
+
+def test_marcar_como_comprado_falha_supabase(mock_item_compra_module):
+    """Teste para cobrir 'if not response.data' em marcar_como_comprado (erro 400)."""
+    # 1. Simula que o item existe (passa no check)
+    # 2. Simula que a atualização falhou (retorna data vazia)
+    mock_item_compra_module.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [{"id": 999}]
+    mock_item_compra_module.table.return_value.update.return_value.eq.return_value.execute.return_value.data = []
+    
+    response = client.patch("/itens-compra/999/comprado?comprado=true")
+    
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()["detail"] == "Erro ao atualizar status do item"
+
+def test_marcar_como_comprado_excecao(mock_item_compra_module):
+    """Teste para cobrir o 'except Exception' genérico em marcar_como_comprado."""
+    mock_item_compra_module.table.return_value.select.side_effect = Exception("Falha de atualização de status")
+    
+    response = client.patch("/itens-compra/999/comprado?comprado=true")
+    
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "Falha de atualização de status" in response.json()["detail"]

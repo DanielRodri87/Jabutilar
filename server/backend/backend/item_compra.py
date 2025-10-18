@@ -24,17 +24,22 @@ def criar_item_compra(item: ItemCompraCreate):
         response = supabase.table("itemCompras_data").insert(data).execute()
         
         if not response.data:
+            # Erro de negócio (esperado no teste de falha 400)
             raise HTTPException(status_code=400, detail="Erro ao criar item de compra")
         
         return {
             "message": "Item de compra criado com sucesso",
             "data": response.data[0]
         }
+    except HTTPException:
+        # Propaga a HTTPException (400)
+        raise
     except Exception as e:
+        # Captura erros inesperados (rede, DB, etc.) e os trata como 500
         logger.error(f"Erro ao criar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao criar item de compra: {str(e)}"
+            detail=f"Erro inesperado ao criar item de compra: {str(e)}"
         )
 
 def listar_itens_compra(id_list: int = None):
@@ -51,11 +56,15 @@ def listar_itens_compra(id_list: int = None):
             "message": "Itens de compra recuperados com sucesso",
             "data": response.data
         }
+    except HTTPException:
+        # Propaga HTTPException (se alguma for levantada por Query params inválidos, embora improvável aqui)
+        raise
     except Exception as e:
+        # Captura erros inesperados
         logger.error(f"Erro ao listar itens de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao listar itens de compra: {str(e)}"
+            detail=f"Erro inesperado ao listar itens de compra: {str(e)}"
         )
 
 def obter_item_compra(item_id: int):
@@ -71,12 +80,14 @@ def obter_item_compra(item_id: int):
             "data": response.data[0]
         }
     except HTTPException:
+        # Propaga a HTTPException (404)
         raise
     except Exception as e:
+        # Captura erros inesperados
         logger.error(f"Erro ao obter item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao obter item de compra: {str(e)}"
+            detail=f"Erro inesperado ao obter item de compra: {str(e)}"
         )
 
 def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
@@ -108,6 +119,7 @@ def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
         response = supabase.table("itemCompras_data").update(data).eq("id", item_id).execute()
         
         if not response.data:
+            # Erro de negócio (esperado no teste de falha 400)
             raise HTTPException(status_code=400, detail="Erro ao atualizar item de compra")
         
         return {
@@ -115,12 +127,14 @@ def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
             "data": response.data[0]
         }
     except HTTPException:
+        # Propaga a HTTPException (404 ou 400)
         raise
     except Exception as e:
+        # Captura erros inesperados
         logger.error(f"Erro ao atualizar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao atualizar item de compra: {str(e)}"
+            detail=f"Erro inesperado ao atualizar item de compra: {str(e)}"
         )
 
 def deletar_item_compra(item_id: int):
@@ -139,12 +153,14 @@ def deletar_item_compra(item_id: int):
             "data": response.data
         }
     except HTTPException:
+        # Propaga a HTTPException (404)
         raise
     except Exception as e:
+        # Captura erros inesperados
         logger.error(f"Erro ao deletar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao deletar item de compra: {str(e)}"
+            detail=f"Erro inesperado ao deletar item de compra: {str(e)}"
         )
 
 def marcar_como_comprado(item_id: int, comprado: bool = True):
@@ -163,6 +179,7 @@ def marcar_como_comprado(item_id: int, comprado: bool = True):
         response = supabase.table("itemCompras_data").update(data).eq("id", item_id).execute()
         
         if not response.data:
+            # Erro de negócio (esperado no teste de falha 400)
             raise HTTPException(status_code=400, detail="Erro ao atualizar status do item")
         
         return {
@@ -170,10 +187,12 @@ def marcar_como_comprado(item_id: int, comprado: bool = True):
             "data": response.data[0]
         }
     except HTTPException:
+        # Propaga a HTTPException (404 ou 400)
         raise
     except Exception as e:
+        # Captura erros inesperados
         logger.error(f"Erro ao atualizar status do item: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao atualizar status do item: {str(e)}"
+            detail=f"Erro inesperado ao atualizar status do item: {str(e)}"
         )
