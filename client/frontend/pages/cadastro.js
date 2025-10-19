@@ -2,6 +2,46 @@ export default function Cadastro() {
   return (
     <>
       <style>{`
+        /* Light */
+        @font-face {
+          font-family: 'Airbnb Cereal';
+          src: url('../fonts/AirbnbCereal_W_Lt.otf') format('opentype');
+          font-weight: 300;
+          font-style: normal;
+        }
+
+        /* Book (Regular) */
+        @font-face {
+          font-family: 'Airbnb Cereal';
+          src: url('../fonts/AirbnbCereal_W_Bk.otf') format('opentype');
+          font-weight: 400;
+          font-style: normal;
+        }
+
+        /* Medium */
+        @font-face {
+          font-family: 'Airbnb Cereal';
+          src: url('../fonts/AirbnbCereal_W_Md.otf') format('opentype');
+          font-weight: 500;
+          font-style: normal;
+        }
+
+        /* Bold */
+        @font-face {
+          font-family: 'Airbnb Cereal';
+          src: url('../fonts/AirbnbCereal_W_Bd.otf') format('opentype');
+          font-weight: 700;
+          font-style: normal;
+        }
+
+        /* ExtraBold */
+        @font-face {
+          font-family: 'Airbnb Cereal';
+          src: url('../fonts/AirbnbCereal_W_XBd.otf') format('opentype');
+          font-weight: 800;
+          font-style: normal;
+        }
+
         * {
           margin: 0;
           padding: 0;
@@ -9,20 +49,19 @@ export default function Cadastro() {
         }
 
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-          background-color: #f3f4f6;
+          background-color: white;
         }
 
         .container {
           min-height: 100vh;
-          padding: 48px 16px;
         }
 
         .card {
-          max-width: 448px;
+          width: 685px;
+          height: 985px;
           margin: 0 auto;
-          background-color: white;
-          border-radius: 8px;
+          background-color: #fafafaff;
+          border-radius: 35px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           padding: 32px;
         }
@@ -32,10 +71,13 @@ export default function Cadastro() {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 32px;
+          padding: 0 35px;
+          margin-top: 28px;
         }
 
         .logo {
-          display: flex;
+          width: 30%;
+          height: 30%;
           align-items: center;
           gap: 8px;
         }
@@ -46,13 +88,14 @@ export default function Cadastro() {
         }
 
         .backButton {
+          margin-right: 35px;
           background: none;
           border: none;
           color: #4b5563;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          padding: 0;
+          padding: -10;
         }
 
         .backButton:hover {
@@ -60,12 +103,15 @@ export default function Cadastro() {
         }
 
         .title {
-          font-size: 28px;
-          font-weight: bold;
+          font-family: 'Airbnb Cereal', sans-serif;
+          font-weight: 700;
+          font-size: 35px;
           margin-bottom: 8px;
+          letter-spacing: -0.5px; /* diminui o espaçamento entre letras */
         }
 
         .subtitle {
+          font-family: 'Airbnb Cereal Normal', sans-serif;
           color: #6b7280;
           font-size: 14px;
           margin-bottom: 24px;
@@ -85,22 +131,168 @@ export default function Cadastro() {
 
         .label {
           display: block;
+          margin-bottom: 6px;
+        }
+
+        /* Wrapper para inputs com label interno (floating, fixo) */
+        .inputWrapper {
+          position: relative;
+        }
+
+        /* Label fixo dentro do input (estética do input) */
+        .floatingLabel {
+          position: absolute;
+          left: 12px;
+          top: 8px;
+          font-family: 'Airbnb Cereal', sans-serif;
+          font-weight: 700;
           font-size: 12px;
-          font-weight: bold;
-          margin-bottom: 4px;
+          color: #111827;
+          pointer-events: none; /* não bloqueia o clique no input */
+          background: transparent;
+        }
+
+        .inputWrapper:focus-within .floatingLabel {
+          color: #667467;
+        }
+
+        .inputWrapper:focus-within .input,
+        .inputWrapper:focus-within .composedInput {
+          border-color: #667467;
+        }
+
+        .floatingLabel {
+          transition: color 160ms ease;
+        }
+
+        .input, .composedInput {
+          transition: border-color 160ms ease;
         }
 
         .input {
           width: 100%;
-          padding: 8px 12px;
+          padding: 22px 12px 8px 12px; /* padding-top maior para acomodar label */
           border: 1px solid #d1d5db;
-          border-radius: 4px;
+          border-radius: 5px;
           font-size: 14px;
           outline: none;
         }
 
+        .labelTitle {
+          display: block;
+          font-family: 'Airbnb Cereal', sans-serif;
+          font-weight: 700; /* Bold */
+          font-size: 12px;
+          letter-spacing: 0.2px;
+          color: #111827;
+          margin-bottom: 4px;
+        }
+
+        .labelText {
+          display: block;
+          font-family: 'Airbnb Cereal', sans-serif;
+          font-weight: 300; /* Lt */
+          font-size: 12px;
+          color: rgba(17,24,39,0.5); /* 50% de opacidade sobre cor escura */
+          margin-top: 0;
+        }
+
         .input:focus {
           border-color: #22c55e;
+        }
+
+        /* Composed input: container que parece um único input, mas contém vários campos (ex: dia/mês/ano) */
+        .composedInput {
+          width: 100%;
+          padding: 22px 12px 8px 12px; /* mesmo espaço que .input para alinhar o floatingLabel */
+          border: 1px solid #d1d5db;
+          border-radius: 5px;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          background: transparent;
+        }
+
+        .composedInput .dateInput {
+          flex: 1;
+          padding: 0; /* já temos padding no container */
+          border: none;
+          border-radius: 0;
+          font-size: 14px;
+          background: transparent;
+          outline: none;
+        }
+
+        .composedInput .dateInput:focus {
+          box-shadow: none;
+          outline: none;
+        }
+
+        /* Username: desloca o floatingLabel para não sobrepor o símbolo @ */
+        .usernameWrapper .floatingLabel {
+          left: 36px; /* desloca o título para a área do input, após o @ */
+        }
+
+        /* Username: posicionar @ dentro do input e ajustar padding do input */
+        .usernameContainer {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .usernameContainer .atSymbol {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          z-index: 2;
+        }
+
+        /* Garante o mesmo espaçamento vertical que os outros inputs e espaço à esquerda para o @ */
+        .usernameInput.input {
+          padding: 22px 12px 8px 44px;
+        }
+
+        /* Aplica 4px de deslocamento apenas ao placeholder do username */
+        .usernameInput.input::placeholder {
+          text-indent: 3px;
+          color: rgba(17,24,39,0.5);
+        }
+
+        /* Quando o username estiver dentro do usernameWrapper, garante-se que o label alinhe com o texto */
+        .usernameWrapper .floatingLabel {
+          left: 44px; /* posiciona o título após o @ símbolo */
+          z-index: 3; /* garante que fique acima do input e do @ */
+          background: white; /* pequeno fundo para legibilidade */
+          padding: 0 4px;
+        }
+
+        /* Composed phone: quando usado, o countryCode fica sem borda e o container tem a borda do input */
+        .composedInput.phoneContainerWrapper {
+          padding: 22px 12px 8px 12px; /* mesmo espaço do input */
+        }
+
+        .composedInput.phoneContainerWrapper .phoneContainer {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          width: 100%;
+          background: transparent;
+        }
+
+        .composedInput.phoneContainerWrapper .countryCode {
+          background: transparent;
+          border: none;
+          padding: 0 8px;
+        }
+
+        .composedInput.phoneContainerWrapper .phoneInput {
+          flex: 1;
+          border: none;
+          padding: 0;
+          background: transparent;
+          outline: none;
         }
 
         .dateContainer {
@@ -112,12 +304,12 @@ export default function Cadastro() {
           flex: 1;
           padding: 8px 12px;
           border: 1px solid #d1d5db;
-          border-radius: 4px;
+          border-radius: 5px;
           font-size: 14px;
         }
 
         .dateInput:focus {
-          border-color: #22c55e;
+          border-color: #667467;
         }
 
         .usernameContainer {
@@ -134,7 +326,7 @@ export default function Cadastro() {
           flex: 1;
           padding: 8px 12px;
           border: 1px solid #d1d5db;
-          border-radius: 4px;
+          border-radius: 5px;
           font-size: 14px;
         }
 
@@ -152,7 +344,7 @@ export default function Cadastro() {
           align-items: center;
           background-color: #dcfce7;
           padding: 8px 12px;
-          border-radius: 4px;
+          border-radius: 5px;
           border: 1px solid #d1d5db;
           gap: 4px;
         }
@@ -161,7 +353,7 @@ export default function Cadastro() {
           flex: 1;
           padding: 8px 12px;
           border: 1px solid #d1d5db;
-          border-radius: 4px;
+          border-radius: 5px;
           font-size: 14px;
         }
 
@@ -188,19 +380,46 @@ export default function Cadastro() {
 
         .submitButton {
           width: 100%;
-          background-color: #4ade80;
-          color: white;
-          font-weight: bold;
+          background-color: transparent; /* <-- importante: deixa transparente */
+          color: black;
+          font-weight: 700;
           padding: 12px 0;
-          border: none;
+          border: 1px solid transparent; /* sem borda inicialmente */
           border-radius: 6px;
           cursor: pointer;
           font-size: 16px;
-          transition: background-color 0.2s;
+          position: relative;
+          overflow: hidden;
+          transition: border-color 1s ease; /* anima borda suavemente */
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Camada de fundo: responsável pela cor e pela opacidade */
+        .submitButton::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-color: #C1D9C1; /* cor base */
+          opacity: 1; /* normal = 100% */
+          transition: opacity 0.3s ease; /* anima a mudança (smart animate) */
+          z-index: 0;
+          pointer-events: none; /* permite clicar no botão normalmente */
+        }
+
+        /* Hover: fundo passa a 21% e borda aparece */
+        .submitButton:hover::before {
+          opacity: 0.21; /* 21% */
         }
 
         .submitButton:hover {
-          background-color: #22c55e;
+          border-color: #667467; /* borda desejada no hover */
+        }
+
+        /* Texto acima do overlay */
+        .submitButton span {
+          position: relative;
+          z-index: 1;
+          display: inline-block;
         }
 
         .submitButton:disabled {
@@ -233,6 +452,7 @@ export default function Cadastro() {
           gap: 12px;
         }
 
+        /* --- estilo base compartilhado --- */
         .socialButton {
           width: 100%;
           display: flex;
@@ -242,178 +462,276 @@ export default function Cadastro() {
           border: 1px solid #d1d5db;
           padding: 12px 16px;
           border-radius: 6px;
-          background-color: white;
+          background-color: transparent; /* fundo controlado pelo ::before */
           cursor: pointer;
-          transition: background-color 0.2s;
+          transition: border-color 1s ease;
           font-size: 14px;
           font-weight: 600;
+          position: relative;
+          overflow: hidden;
         }
 
-        .socialButton:hover {
-          background-color: #f9fafb;
-        }
-
-        .footer {
-          margin-top: 48px;
-          background-color: #f3f4f6;
-          padding: 32px 16px;
-        }
-
-        .footerContainer {
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .footerContent {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 24px;
-          margin-bottom: 32px;
-          align-items: start;
-        }
-
-        .footerLeft {
-          text-align: left;
-        }
-
-        .footerCenter {
-          display: flex;
-          justify-content: center;
-        }
-
-        .footerRight {
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .footerLogo {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 12px;
-          font-weight: bold;
-          font-size: 14px;
-        }
-
-        .footerLeft p {
-          font-size: 12px;
-          color: #6b7280;
-          margin: 4px 0;
-        }
-
-        .socialLinks {
-          display: flex;
-          gap: 12px;
-        }
-
-        .socialLinks a {
-          display: inline-block;
+        /* camada de fundo animada (atrás do conteúdo!) */
+        .socialButton::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-color: #ffffff;
           opacity: 1;
-          transition: opacity 0.2s;
+          transition: background-color 1s ease, opacity 1s ease;
+          z-index: 0; /* Fica atrás do texto e das logos */
+          pointer-events: none;
         }
 
-        .socialLinks a:hover {
-          opacity: 0.7;
+        /* texto e ícones acima da camada */
+        .socialButton span,
+        .socialButton img,
+        .socialButton svg {
+          position: relative;
+          z-index: 1; /* Garante que fiquem acima do ::before */
         }
 
-        .footerBottom {
-          border-top: 1px solid #d1d5db;
-          padding-top: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          align-items: center;
-          text-align: center;
+        /* --- FACEBOOK --- */
+        .facebookButton:hover {
+          border-color: #1877F2;
         }
 
-        .footerInfo {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          justify-content: center;
+        .facebookButton:hover::before {
+          background-color: #1877F2;
+          opacity: 0.21;
         }
 
-        .footerInfo span,
-        .footerInfo a {
-          font-size: 12px;
-          color: #6b7280;
+        /* --- APPLE --- */
+        .appleButton:hover {
+          border-color: #000000;
         }
 
-        .footerInfo a {
-          font-weight: 600;
-          text-decoration: none;
+        .appleButton:hover::before {
+          background-color: #000000;
+          opacity: 0.21;
         }
 
-        .footerInfo a:hover {
-          color: #22c55e;
+        /* --- GOOGLE --- */
+        .googleButton:hover {
+          border-color: #F14336;
         }
+
+        .googleButton:hover::before {
+          background-color: #F14336;
+          opacity: 0.21;
+        }
+
+      .footer {
+        width: 100vw; /* ocupar toda a largura da viewport */
+        box-sizing: border-box;
+        position: relative;
+        bottom: 0;
+        left: 0;  /* garante que comece do início da tela */
+        margin: 0; /* remove qualquer margem extra */
+      }
+
+      .jabutilar {
+        width: 120px;
+        height: auto;
+      }
+
+      .footerContainer {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        align-items: center;
+        max-width: 1200px;
+        margin-left: 20px;
+      }
+
+      /* Conteúdo principal ocupa todo espaço disponível */
+      .main-content {
+        flex: 1; /* força o conteúdo a ocupar o espaço restante */
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 48px;
+        width: 100%;
+        background-color: #fafafaff;
+        padding: 32px 0 32px 16px; /* remove padding direito para aproximar da borda */
+        box-sizing: border-box;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      /* Footer Left */
+      .footerLeft {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-left: 0px; /* aproxima do limite esquerdo da página */
+      }
+
+      .footerLeft .logoText {
+        font-family: 'Airbnb Cereal', sans-serif;
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 1px;
+        color: #000;
+      }
+
+      .footerLeft p {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0;
+      }
+
+      /* Footer Info */
+      .footerInfo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .footerInfo img {
+        width: 18px;
+        height: 18px;
+      }
+
+      .footerInfo span,
+      .footerInfo a {
+        font-size: 13px;
+        color: #333;
+        text-decoration: none;
+      }
+
+      .footerInfo a:hover {
+        color: #22c55e;
+      }
+
+      /* Footer Center */
+      .footerCenter {
+        margin-left: 100%;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .footerCenter img {
+        width: 150px;
+        height: auto;
+      }
+
+      /* Footer Right */
+      .footerRight {
+        margin-left: 150%; /* garante sem margem extra */
+      }
+
+      /* Redes sociais */
+      .socialLinks {
+        display: flex;
+        gap: 7px;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .socialLinks img {
+        width: 34px;
+        height: 34px;
+        object-fit: contain;
+        transition: opacity 0.2s;
+      }
+
+      .socialLinks img:hover {
+        opacity: 0.7;
+      }
+
       `}</style>
 
-      <div className="container">
-        <div className="card">
-          <div className="header">
-            <div className="logo">
-              <img src="/jabuti.png" alt="Logo" width="40" height="40" />
-              <span className="logoText">JABUTILÁ</span>
-            </div>
+      <div>
+        <title>Entre e organize sua vida caótica</title>
+        <meta name="description" content="Página de cadastro do Jabutilar" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px' }}>
+          <div>
+            <img className="logo" src="/logotipo.png" alt="Logo" width="40" height="40" />
+          </div>
+          <div>
             <button className="backButton">Voltar</button>
           </div>
-
+        </div>
+      </div>
+      <div className="container">
+        <div className="card">
           <h1 className="title">Entre e organize sua vida cáotica</h1>
           <p className="subtitle">Preencha os campos abaixo e deixe o público te achar com o dedo</p>
 
           <form className="form" onSubmit={handleSubmit}>
             <div className="namesContainer">
               <div>
-                <label className="label">PRIMEIRO NOME</label>
-                <input type="text" name="primeiroNome" className="input" placeholder="Digite seu primeiro nome" required />
+                <div className="inputWrapper">
+                  <span className="floatingLabel">PRIMEIRO NOME</span>
+                  <input type="text" name="primeiroNome" className="input" placeholder="Digite o seu nome aqui" required />
+                </div>
               </div>
               <div>
-                <label className="label">SEGUNDO NOME</label>
-                <input type="text" name="segundoNome" className="input" placeholder="Digite seu segundo nome" required />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">DATA DE NASCIMENTO</label>
-              <div className="dateContainer">
-                <input type="number" name="dia" className="dateInput" placeholder="Dia" min="1" max="31" required />
-                <input type="number" name="mes" className="dateInput" placeholder="Mês" min="1" max="12" required />
-                <input type="number" name="ano" className="dateInput" placeholder="Ano" required />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">USERNAME</label>
-              <div className="usernameContainer">
-                <span className="atSymbol">@</span>
-                <input type="text" name="username" className="usernameInput" placeholder="Escolha um nome de usuário" required />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">EMAIL</label>
-              <input type="email" name="email" className="input" placeholder="Digite seu email" required />
-            </div>
-
-            <div>
-              <label className="label">SENHA</label>
-              <input type="password" name="senha" className="input" placeholder="Digite sua senha" required />
-            </div>
-
-            <div>
-              <label className="label">CONFIRME SUA SENHA</label>
-              <input type="password" name="confirmarSenha" className="input" placeholder="Confirme sua senha" required />
-            </div>
-
-            <div>
-              <label className="label">CELULAR</label>
-              <div className="phoneContainer">
-                <div className="countryCode">
-                  <img src="/brasil.png" alt="Brasil" width="20" height="15" />
-                  <span>+55</span>
+                <div className="inputWrapper">
+                  <span className="floatingLabel">SEGUNDO NOME</span>
+                  <input type="text" name="segundoNome" className="input" placeholder="Digite seu sobrenome aqui" required />
                 </div>
-                <input type="tel" name="celular" className="phoneInput" placeholder="(11) 99999-0000" required />
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper">
+                <span className="floatingLabel">DATA DE NASCIMENTO</span>
+                <div className="composedInput">
+                  <input type="number" name="dia" className="dateInput" placeholder="Dia" min="1" max="31" required />
+                  <input type="number" name="mes" className="dateInput" placeholder="Mês" min="1" max="12" required />
+                  <input type="number" name="ano" className="dateInput" placeholder="Ano" required />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper usernameWrapper">
+                <span className="floatingLabel">USERNAME</span>
+                <div className="usernameContainer">
+                  <span className="atSymbol">@</span>
+                  <input type="text" name="username" className="usernameInput input" placeholder="Escolha um nome de usuário" required />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper">
+                <span className="floatingLabel">EMAIL</span>
+                <input type="email" name="email" className="input" placeholder="Digite seu email aqui" required />
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper">
+                <span className="floatingLabel">SENHA</span>
+                <input type="password" name="senha" className="input" placeholder="Crie uma senha segura" required />
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper">
+                <span className="floatingLabel">CONFIRME SUA SENHA</span>
+                <input type="password" name="confirmarSenha" className="input" placeholder="Repita a senha para confirmar" required />
+              </div>
+            </div>
+
+            <div>
+              <div className="inputWrapper">
+                <span className="floatingLabel">CELULAR</span>
+                <div className="composedInput phoneContainerWrapper">
+                  <div className="phoneContainer">
+                    <div className="countryCode">
+                      <img src="/brasil.png" alt="Brasil" width="20" height="15" />
+                      <span>+55</span>
+                    </div>
+                    <input type="tel" name="celular" className="phoneInput phoneInputInner" placeholder="Informe seu telefone com DDD" required />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -424,7 +742,7 @@ export default function Cadastro() {
               </label>
             </div>
 
-            <button type="submit" className="submitButton">Cadastrar</button>
+            <button class="submitButton"><span>Cadastrar</span></button>
           </form>
 
           <div className="divider">
@@ -434,15 +752,17 @@ export default function Cadastro() {
           </div>
 
           <div className="socialContainer">
-            <button className="socialButton" onClick={() => handleSocialLogin('Facebook')}>
+            <button class="socialButton facebookButton">
               <img src="/facebook.png" alt="Facebook" width="24" />
               <span>Continuar com Facebook</span>
             </button>
-            <button className="socialButton" onClick={() => handleSocialLogin('Apple')}>
+
+            <button class="socialButton appleButton">
               <img src="/apple.png" alt="Apple" width="24" />
               <span>Continuar com Apple</span>
             </button>
-            <button className="socialButton" onClick={() => handleSocialLogin('Google')}>
+
+            <button class="socialButton googleButton">
               <img src="/google.png" alt="Google" width="24" />
               <span>Continuar com Google</span>
             </button>
@@ -451,35 +771,33 @@ export default function Cadastro() {
 
         <footer className="footer">
           <div className="footerContainer">
-            <div className="footerContent">
-              <div className="footerLeft">
-                <div className="footerLogo">
-                  <img src="/nome da logo.png" alt="Jabutilá" width="32" />
-                  <span>JABUTILÁ</span>
-                </div>
-                <p>© Jabutilá Inc.</p>
-                <p>All rights reserved</p>
-              </div>
+            {/* Esquerda */}
+            <div className="footerLeft">
+              <img className="jabutilar" src="/jabutilar.png" alt="jabutilar"/>
+              <p>© JabutiLar Inc.<br />All rights reserved</p>
 
-              <div className="footerCenter">
-                <img src="/jabuti.png" alt="Jabutilá" width="80" />
+              <div className="footerInfo">
+                <img src="/localização.png" alt="Localização" />
+                <span>R. Cícero Duarte, 905 - Junco, Picos - PI, 64607-670</span>
               </div>
-
-              <div className="footerRight">
-                <div className="socialLinks">
-                  <a href="#"><img src="/Redes sociais.png" alt="Redes Sociais" width="24" /></a>
-                </div>
+              <div className="footerInfo">
+                <img src="/telefone.png" alt="Telefone" />
+                <a href="tel:+5586999230714">(89) 99923-0714</a>
               </div>
             </div>
 
-            <div className="footerBottom">
-              <div className="footerInfo">
-                <img src="/localização.png" alt="Localização" width="20" />
-                <span>R. Cecero Duarte, 305 - Junco, Picos - PI, 64607-670</span>
-              </div>
-              <div className="footerInfo">
-                <img src="/telefone.png" alt="Telefone" width="20" />
-                <a href="tel:+558699923074">(86) 99923-0714</a>
+            {/* Centro */}
+            <div className="footerCenter">
+              <img src="/jabuti.png" alt="Logo Jabuti" />
+            </div>
+
+            {/* Direita */}
+            <div className="footerRight">
+              <div className="socialLinks">
+                <a href="#"><img src="/instagramblack.png" alt="Instagram" /></a>
+                <a href="#"><img src="/facebookblack.png" alt="Facebook" /></a>
+                <a href="#"><img src="/linkedinblack.png" alt="LinkedIn" /></a>
+                <a href="#"><img src="/twitterblack.png" alt="Twitter" /></a>
               </div>
             </div>
           </div>
