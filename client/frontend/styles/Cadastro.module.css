@@ -1,0 +1,127 @@
+.container {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 48px 16px;
+}
+
+.card {
+  max-width: 448px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo img {
+  object-fit: contain;
+}
+
+.logoText {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.backButton:hover {
+  color: #111827;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.checkbox {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.checkboxLabel {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.submitButton {
+  width: 100%;
+  background-color: #4ade80;
+  color: white;
+  font-weight: bold;
+  padding: 12px 0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #22c55e;
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.divider {
+  margin: 24px 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: #d1d5db;
+}
+
+.dividerText {
+  font-size: 14px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
