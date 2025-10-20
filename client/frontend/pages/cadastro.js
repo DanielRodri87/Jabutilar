@@ -1,4 +1,22 @@
+import { useRouter } from 'next/router';
+
 export default function Cadastro() {
+  const router = useRouter();
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    console.log('Dados do formulário:', Object.fromEntries(formData));
+    alert('Cadastro realizado com sucesso!');
+    
+    // Redireciona para cadastro de grupo
+    router.push('/cadastro_grupo');
+  }
+
+  function handleSocialLogin(provider) {
+    console.log(`Login com ${provider}`);
+  }
+
   return (
     <>
       <style>{`
@@ -107,7 +125,7 @@ export default function Cadastro() {
           font-weight: 700;
           font-size: 35px;
           margin-bottom: 8px;
-          letter-spacing: -0.5px; /* diminui o espaçamento entre letras */
+          letter-spacing: -0.5px;
         }
 
         .subtitle {
@@ -134,12 +152,10 @@ export default function Cadastro() {
           margin-bottom: 6px;
         }
 
-        /* Wrapper para inputs com label interno (floating, fixo) */
         .inputWrapper {
           position: relative;
         }
 
-        /* Label fixo dentro do input (estética do input) */
         .floatingLabel {
           position: absolute;
           left: 12px;
@@ -148,7 +164,7 @@ export default function Cadastro() {
           font-weight: 700;
           font-size: 12px;
           color: #111827;
-          pointer-events: none; /* não bloqueia o clique no input */
+          pointer-events: none;
           background: transparent;
         }
 
@@ -171,7 +187,7 @@ export default function Cadastro() {
 
         .input {
           width: 100%;
-          padding: 22px 12px 8px 12px; /* padding-top maior para acomodar label */
+          padding: 22px 12px 8px 12px;
           border: 1px solid #d1d5db;
           border-radius: 5px;
           font-size: 14px;
@@ -181,7 +197,7 @@ export default function Cadastro() {
         .labelTitle {
           display: block;
           font-family: 'Airbnb Cereal', sans-serif;
-          font-weight: 700; /* Bold */
+          font-weight: 700;
           font-size: 12px;
           letter-spacing: 0.2px;
           color: #111827;
@@ -191,9 +207,9 @@ export default function Cadastro() {
         .labelText {
           display: block;
           font-family: 'Airbnb Cereal', sans-serif;
-          font-weight: 300; /* Lt */
+          font-weight: 300;
           font-size: 12px;
-          color: rgba(17,24,39,0.5); /* 50% de opacidade sobre cor escura */
+          color: rgba(17,24,39,0.5);
           margin-top: 0;
         }
 
@@ -201,10 +217,9 @@ export default function Cadastro() {
           border-color: #22c55e;
         }
 
-        /* Composed input: container que parece um único input, mas contém vários campos (ex: dia/mês/ano) */
         .composedInput {
           width: 100%;
-          padding: 22px 12px 8px 12px; /* mesmo espaço que .input para alinhar o floatingLabel */
+          padding: 22px 12px 8px 12px;
           border: 1px solid #d1d5db;
           border-radius: 5px;
           display: flex;
@@ -215,7 +230,7 @@ export default function Cadastro() {
 
         .composedInput .dateInput {
           flex: 1;
-          padding: 0; /* já temos padding no container */
+          padding: 0;
           border: none;
           border-radius: 0;
           font-size: 14px;
@@ -228,12 +243,10 @@ export default function Cadastro() {
           outline: none;
         }
 
-        /* Username: desloca o floatingLabel para não sobrepor o símbolo @ */
         .usernameWrapper .floatingLabel {
-          left: 36px; /* desloca o título para a área do input, após o @ */
+          left: 36px;
         }
 
-        /* Username: posicionar @ dentro do input e ajustar padding do input */
         .usernameContainer {
           position: relative;
           display: flex;
@@ -249,28 +262,24 @@ export default function Cadastro() {
           z-index: 2;
         }
 
-        /* Garante o mesmo espaçamento vertical que os outros inputs e espaço à esquerda para o @ */
         .usernameInput.input {
           padding: 22px 12px 8px 44px;
         }
 
-        /* Aplica 4px de deslocamento apenas ao placeholder do username */
         .usernameInput.input::placeholder {
           text-indent: 3px;
           color: rgba(17,24,39,0.5);
         }
 
-        /* Quando o username estiver dentro do usernameWrapper, garante-se que o label alinhe com o texto */
         .usernameWrapper .floatingLabel {
-          left: 44px; /* posiciona o título após o @ símbolo */
-          z-index: 3; /* garante que fique acima do input e do @ */
-          background: white; /* pequeno fundo para legibilidade */
+          left: 44px;
+          z-index: 3;
+          background: white;
           padding: 0 4px;
         }
 
-        /* Composed phone: quando usado, o countryCode fica sem borda e o container tem a borda do input */
         .composedInput.phoneContainerWrapper {
-          padding: 22px 12px 8px 12px; /* mesmo espaço do input */
+          padding: 22px 12px 8px 12px;
         }
 
         .composedInput.phoneContainerWrapper .phoneContainer {
@@ -380,42 +389,39 @@ export default function Cadastro() {
 
         .submitButton {
           width: 100%;
-          background-color: transparent; /* <-- importante: deixa transparente */
+          background-color: transparent;
           color: black;
           font-weight: 700;
           padding: 12px 0;
-          border: 1px solid transparent; /* sem borda inicialmente */
+          border: 1px solid transparent;
           border-radius: 6px;
           cursor: pointer;
           font-size: 16px;
           position: relative;
           overflow: hidden;
-          transition: border-color 1s ease; /* anima borda suavemente */
+          transition: border-color 1s ease;
           -webkit-tap-highlight-color: transparent;
         }
 
-        /* Camada de fundo: responsável pela cor e pela opacidade */
         .submitButton::before {
           content: "";
           position: absolute;
           inset: 0;
-          background-color: #C1D9C1; /* cor base */
-          opacity: 1; /* normal = 100% */
-          transition: opacity 0.3s ease; /* anima a mudança (smart animate) */
+          background-color: #C1D9C1;
+          opacity: 1;
+          transition: opacity 0.3s ease;
           z-index: 0;
-          pointer-events: none; /* permite clicar no botão normalmente */
+          pointer-events: none;
         }
 
-        /* Hover: fundo passa a 21% e borda aparece */
         .submitButton:hover::before {
-          opacity: 0.21; /* 21% */
+          opacity: 0.21;
         }
 
         .submitButton:hover {
-          border-color: #667467; /* borda desejada no hover */
+          border-color: #667467;
         }
 
-        /* Texto acima do overlay */
         .submitButton span {
           position: relative;
           z-index: 1;
@@ -452,7 +458,6 @@ export default function Cadastro() {
           gap: 12px;
         }
 
-        /* --- estilo base compartilhado --- */
         .socialButton {
           width: 100%;
           display: flex;
@@ -462,7 +467,7 @@ export default function Cadastro() {
           border: 1px solid #d1d5db;
           padding: 12px 16px;
           border-radius: 6px;
-          background-color: transparent; /* fundo controlado pelo ::before */
+          background-color: transparent;
           cursor: pointer;
           transition: border-color 1s ease;
           font-size: 14px;
@@ -471,7 +476,6 @@ export default function Cadastro() {
           overflow: hidden;
         }
 
-        /* camada de fundo animada (atrás do conteúdo!) */
         .socialButton::before {
           content: "";
           position: absolute;
@@ -479,19 +483,17 @@ export default function Cadastro() {
           background-color: #ffffff;
           opacity: 1;
           transition: background-color 1s ease, opacity 1s ease;
-          z-index: 0; /* Fica atrás do texto e das logos */
+          z-index: 0;
           pointer-events: none;
         }
 
-        /* texto e ícones acima da camada */
         .socialButton span,
         .socialButton img,
         .socialButton svg {
           position: relative;
-          z-index: 1; /* Garante que fiquem acima do ::before */
+          z-index: 1;
         }
 
-        /* --- FACEBOOK --- */
         .facebookButton:hover {
           border-color: #1877F2;
         }
@@ -501,7 +503,6 @@ export default function Cadastro() {
           opacity: 0.21;
         }
 
-        /* --- APPLE --- */
         .appleButton:hover {
           border-color: #000000;
         }
@@ -511,7 +512,6 @@ export default function Cadastro() {
           opacity: 0.21;
         }
 
-        /* --- GOOGLE --- */
         .googleButton:hover {
           border-color: #F14336;
         }
@@ -521,128 +521,120 @@ export default function Cadastro() {
           opacity: 0.21;
         }
 
-      .footer {
-        width: 100vw; /* ocupar toda a largura da viewport */
-        box-sizing: border-box;
-        position: relative;
-        bottom: 0;
-        left: 0;  /* garante que comece do início da tela */
-        margin: 0; /* remove qualquer margem extra */
-      }
+        .footer {
+          width: 100vw;
+          box-sizing: border-box;
+          position: relative;
+          bottom: 0;
+          left: 0;
+          margin: 0;
+        }
 
-      .jabutilar {
-        width: 120px;
-        height: auto;
-      }
+        .jabutilar {
+          width: 120px;
+          height: auto;
+        }
 
-      .footerContainer {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        align-items: center;
-        max-width: 1200px;
-        margin-left: 20px;
-      }
+        .footerContainer {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          align-items: center;
+          max-width: 1200px;
+          margin-left: 20px;
+        }
 
-      /* Conteúdo principal ocupa todo espaço disponível */
-      .main-content {
-        flex: 1; /* força o conteúdo a ocupar o espaço restante */
-      }
+        .main-content {
+          flex: 1;
+        }
 
-      /* Footer */
-      .footer {
-        margin-top: 48px;
-        width: 100%;
-        background-color: #fafafaff;
-        padding: 32px 0 32px 16px; /* remove padding direito para aproximar da borda */
-        box-sizing: border-box;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 24px;
-      }
+        .footer {
+          margin-top: 48px;
+          width: 100%;
+          background-color: #fafafaff;
+          padding: 32px 0 32px 16px;
+          box-sizing: border-box;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 24px;
+        }
 
-      /* Footer Left */
-      .footerLeft {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        margin-left: 0px; /* aproxima do limite esquerdo da página */
-      }
+        .footerLeft {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          margin-left: 0px;
+        }
 
-      .footerLeft .logoText {
-        font-family: 'Airbnb Cereal', sans-serif;
-        font-weight: 700;
-        font-size: 16px;
-        letter-spacing: 1px;
-        color: #000;
-      }
+        .footerLeft .logoText {
+          font-family: 'Airbnb Cereal', sans-serif;
+          font-weight: 700;
+          font-size: 16px;
+          letter-spacing: 1px;
+          color: #000;
+        }
 
-      .footerLeft p {
-        font-size: 12px;
-        color: #6b7280;
-        margin: 0;
-      }
+        .footerLeft p {
+          font-size: 12px;
+          color: #6b7280;
+          margin: 0;
+        }
 
-      /* Footer Info */
-      .footerInfo {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
+        .footerInfo {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
 
-      .footerInfo img {
-        width: 18px;
-        height: 18px;
-      }
+        .footerInfo img {
+          width: 18px;
+          height: 18px;
+        }
 
-      .footerInfo span,
-      .footerInfo a {
-        font-size: 13px;
-        color: #333;
-        text-decoration: none;
-      }
+        .footerInfo span,
+        .footerInfo a {
+          font-size: 13px;
+          color: #333;
+          text-decoration: none;
+        }
 
-      .footerInfo a:hover {
-        color: #22c55e;
-      }
+        .footerInfo a:hover {
+          color: #22c55e;
+        }
 
-      /* Footer Center */
-      .footerCenter {
-        margin-left: 100%;
-        justify-content: center;
-        align-items: center;
-      }
+        .footerCenter {
+          margin-left: 100%;
+          justify-content: center;
+          align-items: center;
+        }
 
-      .footerCenter img {
-        width: 150px;
-        height: auto;
-      }
+        .footerCenter img {
+          width: 150px;
+          height: auto;
+        }
 
-      /* Footer Right */
-      .footerRight {
-        margin-left: 150%; /* garante sem margem extra */
-      }
+        .footerRight {
+          margin-left: 150%;
+        }
 
-      /* Redes sociais */
-      .socialLinks {
-        display: flex;
-        gap: 7px;
-        justify-content: center;
-        align-items: center;
-      }
+        .socialLinks {
+          display: flex;
+          gap: 7px;
+          justify-content: center;
+          align-items: center;
+        }
 
-      .socialLinks img {
-        width: 34px;
-        height: 34px;
-        object-fit: contain;
-        transition: opacity 0.2s;
-      }
+        .socialLinks img {
+          width: 34px;
+          height: 34px;
+          object-fit: contain;
+          transition: opacity 0.2s;
+        }
 
-      .socialLinks img:hover {
-        opacity: 0.7;
-      }
-
+        .socialLinks img:hover {
+          opacity: 0.7;
+        }
       `}</style>
 
       <div>
@@ -742,7 +734,7 @@ export default function Cadastro() {
               </label>
             </div>
 
-            <button class="submitButton"><span>Cadastrar</span></button>
+            <button type="submit" className="submitButton"><span>Cadastrar</span></button>
           </form>
 
           <div className="divider">
@@ -752,17 +744,17 @@ export default function Cadastro() {
           </div>
 
           <div className="socialContainer">
-            <button class="socialButton facebookButton">
+            <button type="button" className="socialButton facebookButton" onClick={() => handleSocialLogin('Facebook')}>
               <img src="/facebook.png" alt="Facebook" width="24" />
               <span>Continuar com Facebook</span>
             </button>
 
-            <button class="socialButton appleButton">
+            <button type="button" className="socialButton appleButton" onClick={() => handleSocialLogin('Apple')}>
               <img src="/apple.png" alt="Apple" width="24" />
               <span>Continuar com Apple</span>
             </button>
 
-            <button class="socialButton googleButton">
+            <button type="button" className="socialButton googleButton" onClick={() => handleSocialLogin('Google')}>
               <img src="/google.png" alt="Google" width="24" />
               <span>Continuar com Google</span>
             </button>
@@ -771,7 +763,6 @@ export default function Cadastro() {
 
         <footer className="footer">
           <div className="footerContainer">
-            {/* Esquerda */}
             <div className="footerLeft">
               <img className="jabutilar" src="/jabutilar.png" alt="jabutilar"/>
               <p>© JabutiLar Inc.<br />All rights reserved</p>
@@ -786,12 +777,10 @@ export default function Cadastro() {
               </div>
             </div>
 
-            {/* Centro */}
             <div className="footerCenter">
               <img src="/jabuti.png" alt="Logo Jabuti" />
             </div>
 
-            {/* Direita */}
             <div className="footerRight">
               <div className="socialLinks">
                 <a href="#"><img src="/instagramblack.png" alt="Instagram" /></a>
@@ -805,15 +794,4 @@ export default function Cadastro() {
       </div>
     </>
   );
-}
-
-function handleSubmit(e) {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  console.log('Dados do formulário:', Object.fromEntries(formData));
-  alert('Cadastro realizado com sucesso!');
-}
-
-function handleSocialLogin(provider) {
-  console.log(`Login com ${provider}`);
 }
