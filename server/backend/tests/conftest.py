@@ -24,3 +24,9 @@ def mock_user_module():
     """Fixture para mockar as funções do módulo user que dependem do supabase."""
     with patch('backend.user.supabase') as mock_db:
         yield mock_db
+
+@pytest.fixture
+def mock_tarefa_module():
+    """Fixture para mockar as funções do módulo tarefas que dependem do supabase."""
+    with patch('backend.tarefas.supabase') as mock_db:
+        yield mock_db
