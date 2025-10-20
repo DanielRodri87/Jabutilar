@@ -41,3 +41,14 @@ class ItemCompraResponse(ItemCompraBase):
 
     class Config:
         from_attributes = True
+
+class TarefasBase(BaseModel):
+    titulo: str
+    descricao: str
+    datavencimento: str # formato: "YYYY-MM-DD"
+    prioridade: int
+    status: Optional[bool]
+    recorrente: Optional[bool]
+    responsavel: int
+    created_at: Optional[datetime] = None
+    update_at: Optional[datetime] = None

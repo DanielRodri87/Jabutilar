@@ -4,7 +4,8 @@ from .schemas import (
     LoginRequest, 
     ItemCompraCreate, 
     ItemCompraUpdate,
-    ItemCompraResponse
+    ItemCompraResponse,
+    TarefasBase
 )
 from .user import cadastrar_usuario, login_usuario
 from .item_compra import (
@@ -15,6 +16,15 @@ from .item_compra import (
     deletar_item_compra,
     marcar_como_comprado
 )
+
+from .tarefas import (
+    criar_tarefa, 
+    listar_tarefas, 
+    excluir_tarefa,
+    obter_tarefa, 
+    atualizar_tarefa
+)
+
 from typing import List, Optional
 
 app = FastAPI(
@@ -64,3 +74,31 @@ def deletar_item(item_id: int):
 def marcar_item_comprado(item_id: int, comprado: bool = Query(True, description="Marcar como comprado (true) ou não comprado (false)")):
     """Marcar ou desmarcar um item como comprado"""
     return marcar_como_comprado(item_id, comprado)
+
+
+# Caminhos das Tarefas.
+
+@app.post("/tarefa", response_model=dict, tags=["Tarefa"])
+def criar_task(item: TarefasBase):
+    """Criar uma nova Tarefa"""
+    return criar_tarefa(item)
+
+@app.get("/tarefa", response_model=dict, tags=["Tarefa"])
+def listar_itens():
+    """Listar todos as Tarefas"""
+    return listar_tarefas()
+
+@app.get("/tarefa/{task_id}", response_model=dict, tags=["Tarefa"])
+def obter_tarefas(task_id: int):
+    """Obter uma Tarefa específica por ID"""
+    return obter_tarefa(task_id)
+
+@app.put("/tarefa/{task_id}", response_model=dict, tags=["Tarefa"])
+def atualizar_item(task_id: int, task: TarefasBase):
+    """Atualizar uma Tarefa existente"""
+    return atualizar_tarefa(task_id, task)
+
+@app.delete("/tarefa/{item_id}", response_model=dict, tags=["Tarefa"])
+def deletar_item(item_id: int):
+    """Deletar uma Tarefa"""
+    return excluir_tarefa(item_id)
