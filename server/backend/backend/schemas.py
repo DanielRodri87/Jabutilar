@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-# Schemas de Autenticação (já existentes)
+# ==================== AUTENTICAÇÃO ====================
 class CadastroRequest(BaseModel):
     email: str
     senha: str
@@ -14,7 +14,7 @@ class LoginRequest(BaseModel):
     email: str
     senha: str
 
-# Schemas para ItemCompras (NOVOS - adicionar abaixo dos existentes)
+# ==================== ITENS DE COMPRA ====================
 class ItemCompraBase(BaseModel):
     nome: str
     quantidade: Optional[int] = None
@@ -42,13 +42,23 @@ class ItemCompraResponse(ItemCompraBase):
     class Config:
         from_attributes = True
 
+# ==================== TAREFAS ====================
 class TarefasBase(BaseModel):
     titulo: str
     descricao: str
-    datavencimento: str # formato: "YYYY-MM-DD"
+    datavencimento: str  # formato: "YYYY-MM-DD"
     prioridade: int
     status: Optional[bool]
     recorrente: Optional[bool]
     responsavel: int
+    created_at: Optional[datetime] = None
+    update_at: Optional[datetime] = None
+
+# ==================== GRUPOS ====================
+class GrupoBase(BaseModel):
+    nome: str
+    descricao: Optional[str] = None
+    cod_convite: int
+    group_owner: int
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None

@@ -1,0 +1,48 @@
+
+{
+  "email": "flavio@gmail.com",
+  "senha": "MinhaSenhaSegura123",
+  "nome": "Flavio Henrique",
+  "username": "flavio86",
+  "data_nascimento": "1995-07-15"
+}
+
+{
+  "email": "flavio@gmail.com",
+  "senha": "MinhaSenhaSegura123"
+}
+
+{
+  "titulo": "teste",
+  "descricao": "legal",
+  "datavencimento": "2026-07-15",
+  "prioridade": 0,
+  "status": true,
+  "recorrente": true,
+  "responsavel": 0
+}
+
+// Testes para item de compra
+// Post: http://127.0.0.1:8000/itens-compra
+{
+  "nome": "Café em pó 500g",
+  "quantidade": 1,
+  "preco": 12.50,
+  "categoria": "Alimentos",
+  "comprado": false,
+  "id_list": 1
+}
+
+// Put: http://127.0.0.1:8000/itens-compra/ID
+{
+  "nome": "Arroz Integral Tipo 10x 5kg",
+  "quantidade": 3,
+  "preco": 30.50,
+  "categoria": "Alimentos",
+  "comprado": true,
+  "id_list": 1
+}
+
+// Delete: http://127.0.0.1:8000/itens-compra/ID
+
+// Get: http://127.0.0.1:8000/itens-compra/ID
