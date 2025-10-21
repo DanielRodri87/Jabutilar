@@ -5,7 +5,8 @@ from .schemas import (
     ItemCompraCreate, 
     ItemCompraUpdate,
     ItemCompraResponse,
-    TarefasBase
+    TarefasBase,
+    GrupoBase
 )
 from .user import cadastrar_usuario, login_usuario
 from .item_compra import (
@@ -23,6 +24,13 @@ from .tarefas import (
     excluir_tarefa,
     obter_tarefa, 
     atualizar_tarefa
+)
+
+from .grupo import (
+    criar_grupo,
+    obter_grupo,
+    atualizar_grupo,
+    excluir_grupo
 )
 
 from typing import List, Optional
@@ -102,3 +110,24 @@ def atualizar_item(task_id: int, task: TarefasBase):
 def deletar_item(item_id: int):
     """Deletar uma Tarefa"""
     return excluir_tarefa(item_id)
+
+@app.post("/grupo", response_model=dict, tags=["Grupo"])
+def criar_novo_grupo(grupo: GrupoBase):
+    """Criar um novo grupo"""
+    return criar_grupo(grupo)
+
+
+@app.get("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
+def obter_dados_grupo(grupo_id: int):
+    """Obter um grupo pelo ID"""
+    return obter_grupo(grupo_id)
+
+@app.put("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
+def atualizar_dados_grupo(grupo_id: int, grupo: GrupoBase):
+    """Atualizar um grupo existente"""
+    return atualizar_grupo(grupo_id, grupo)
+
+@app.delete("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
+def excluir_dados_grupo(grupo_id: int):
+    """Excluir um grupo existente"""
+    return excluir_grupo(grupo_id)
