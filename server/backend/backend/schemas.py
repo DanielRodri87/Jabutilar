@@ -62,3 +62,16 @@ class GrupoBase(BaseModel):
     group_owner: int
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None
+
+# ==================== CONTAS ====================
+class ContasBase(BaseModel):
+    descricao: str
+    valor: float
+    datavencimento: str # formato: "YYYY-MM-DD"
+    status: Optional[bool]
+    categoria: str
+    recorrente: Optional[bool]
+    resp: int
+    grupo_id: int
+    created_at: Optional[datetime] = None
+    update_at: Optional[datetime] = None

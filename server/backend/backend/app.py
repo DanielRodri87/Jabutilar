@@ -6,7 +6,8 @@ from .schemas import (
     ItemCompraUpdate,
     ItemCompraResponse,
     TarefasBase,
-    GrupoBase
+    GrupoBase,
+    ContasBase
 )
 from .user import cadastrar_usuario, login_usuario
 from .item_compra import (
@@ -31,6 +32,14 @@ from .grupo import (
     obter_grupo,
     atualizar_grupo,
     excluir_grupo
+)
+
+from .contas import (
+    criar_conta,
+    atualizar_conta,
+    listar_contas,
+    obter_conta,
+    deletar_conta
 )
 
 from typing import List, Optional
@@ -111,11 +120,12 @@ def deletar_item(item_id: int):
     """Deletar uma Tarefa"""
     return excluir_tarefa(item_id)
 
+# CAMINHO GRUPO
+
 @app.post("/grupo", response_model=dict, tags=["Grupo"])
 def criar_novo_grupo(grupo: GrupoBase):
     """Criar um novo grupo"""
     return criar_grupo(grupo)
-
 
 @app.get("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
 def obter_dados_grupo(grupo_id: int):
@@ -131,3 +141,30 @@ def atualizar_dados_grupo(grupo_id: int, grupo: GrupoBase):
 def excluir_dados_grupo(grupo_id: int):
     """Excluir um grupo existente"""
     return excluir_grupo(grupo_id)
+
+#Caminhos Contas
+
+@app.post("/conta", response_model=dict, tags=["Conta"])
+def criar_nova_conta(conta: ContasBase):
+    """Criar uma nova conta"""
+    return criar_conta(conta)
+
+@app.get("/conta/{grupo_id}", response_model=dict, tags=["Conta"])
+def listar_dados_conta(grupo_id: int):
+    """Listar todas as contas de um grupo"""
+    return listar_contas(grupo_id)
+
+@app.get("/conta/esp/{conta_id}", response_model=dict, tags=["Conta"])
+def obter_dados_conta(conta_id: int):
+    """Obter uma conta pelo ID"""
+    return obter_conta(conta_id)
+
+@app.put("/conta/{conta_id}", response_model=dict, tags=["Conta"])
+def atualizar_dados_conta(conta_id: int, conta: ContasBase):
+    """Atualizar uma conta existente"""
+    return atualizar_conta(conta_id, conta)
+
+@app.delete("/conta/{conta_id}", response_model=dict, tags=["Conta"])
+def excluir_dados_conta(conta_id: int):
+    """Excluir uma conta existente"""
+    return deletar_conta(conta_id)
