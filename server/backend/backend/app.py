@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from .schemas import (
     CadastroRequest, 
     LoginRequest, 
@@ -48,6 +49,18 @@ app = FastAPI(
     title="API Backend",
     description="API para gerenciamento de usuários e itens de compra",
     version="0.1.0"
+)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Next.js development
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Permite todos os headers
 )
 
 # ==================== Rotas de Autenticação ====================

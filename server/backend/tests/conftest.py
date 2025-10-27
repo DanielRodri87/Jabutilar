@@ -8,6 +8,12 @@ from supabase_auth.errors import AuthApiError
 
 
 @pytest.fixture
+def mock_grupo_module():
+    """Fixture para mockar as funções do módulo grupo que dependem do supabase."""
+    with patch('backend.grupo.supabase') as mock_db:
+        yield mock_db
+
+@pytest.fixture
 def mock_supabase():
     """Fixture para mockar o objeto supabase globalmente."""
     with patch('backend.database.supabase') as mock_db:

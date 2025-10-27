@@ -2,6 +2,10 @@ from fastapi import HTTPException
 from .database import supabase
 from .schemas import GrupoBase
 from datetime import datetime
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 TABLE_NAME = "group_data"
 
@@ -26,7 +30,10 @@ def criar_grupo(grupo: GrupoBase):
             "message": "Grupo criado com sucesso",
             "data": response.data[0]
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Erro ao criar grupo: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Erro inesperado ao criar grupo: {str(e)}"
@@ -44,6 +51,7 @@ def obter_grupo(grupo_id: int):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erro ao obter grupo: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 def atualizar_grupo(grupo_id: int, grupo: GrupoBase):
@@ -71,6 +79,7 @@ def atualizar_grupo(grupo_id: int, grupo: GrupoBase):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erro ao atualizar grupo: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 def excluir_grupo(grupo_id: int):
@@ -90,4 +99,5 @@ def excluir_grupo(grupo_id: int):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erro ao excluir grupo: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
