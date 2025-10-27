@@ -1,26 +1,81 @@
-import { useRouter } from 'next/router';
+import React, { useState } from 'react';
+import { apiEndpoints } from '../config/api';
 
 export default function Cadastro() {
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage('');
+
     const formData = new FormData(e.target);
-    console.log('Dados do formulário:', Object.fromEntries(formData));
-    alert('Cadastro realizado com sucesso!');
     
-    // Redireciona para cadastro de grupo
-    router.push('/cadastro_grupo');
+    // Validar se as senhas coincidem
+    const senha = formData.get('senha');
+    const confirmarSenha = formData.get('confirmarSenha');
+    
+    if (senha !== confirmarSenha) {
+      setErrorMessage('As senhas não coincidem!');
+      setIsLoading(false);
+      return;
+    }
+
+    // Formatar a data de nascimento no formato YYYY-MM-DD
+    const dia = formData.get('dia').padStart(2, '0');
+    const mes = formData.get('mes').padStart(2, '0');
+    const ano = formData.get('ano');
+    const dataNascimento = `${ano}-${mes}-${dia}`;
+
+    const dadosCadastro = {
+      email: formData.get('email'),
+      senha: senha,
+      nome: `${formData.get('primeiroNome')} ${formData.get('segundoNome')}`,
+      username: formData.get('username'),
+      data_nascimento: dataNascimento
+    };
+
+    try {
+      const response = await fetch(apiEndpoints.cadastro, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosCadastro)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Cadastro realizado com sucesso!', data);
+        alert('Cadastro realizado com sucesso!');
+        
+        // Aqui você pode adicionar lógica de redirecionamento
+        // window.location.href = '/cadastro_grupo';
+      } else {
+        setErrorMessage(data.detail || 'Erro ao realizar cadastro. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao conectar com o servidor:', error);
+      setErrorMessage('Erro ao conectar com o servidor. Tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleSocialLogin(provider) {
     console.log(`Login com ${provider}`);
+    alert(`Login com ${provider} ainda não implementado.`);
+  }
+
+  function handleBack() {
+    window.history.back();
   }
 
   return (
     <>
       <style>{`
-        /* Light */
         @font-face {
           font-family: 'Airbnb Cereal';
           src: url('../fonts/AirbnbCereal_W_Lt.otf') format('opentype');
@@ -28,7 +83,6 @@ export default function Cadastro() {
           font-style: normal;
         }
 
-        /* Book (Regular) */
         @font-face {
           font-family: 'Airbnb Cereal';
           src: url('../fonts/AirbnbCereal_W_Bk.otf') format('opentype');
@@ -36,7 +90,6 @@ export default function Cadastro() {
           font-style: normal;
         }
 
-        /* Medium */
         @font-face {
           font-family: 'Airbnb Cereal';
           src: url('../fonts/AirbnbCereal_W_Md.otf') format('opentype');
@@ -44,7 +97,6 @@ export default function Cadastro() {
           font-style: normal;
         }
 
-        /* Bold */
         @font-face {
           font-family: 'Airbnb Cereal';
           src: url('../fonts/AirbnbCereal_W_Bd.otf') format('opentype');
@@ -52,7 +104,6 @@ export default function Cadastro() {
           font-style: normal;
         }
 
-        /* ExtraBold */
         @font-face {
           font-family: 'Airbnb Cereal';
           src: url('../fonts/AirbnbCereal_W_XBd.otf') format('opentype');
@@ -113,11 +164,16 @@ export default function Cadastro() {
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          padding: -10;
+          padding: 0;
         }
 
         .backButton:hover {
           color: #111827;
+        }
+
+        .backButton:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .title {
@@ -133,6 +189,18 @@ export default function Cadastro() {
           color: #6b7280;
           font-size: 14px;
           margin-bottom: 24px;
+        }
+
+        .error-message {
+          background-color: #fee;
+          border: 1px solid #fcc;
+          border-radius: 5px;
+          padding: 12px;
+          margin-bottom: 16px;
+          color: #c33;
+          font-size: 14px;
+          text-align: center;
+          font-family: 'Airbnb Cereal', sans-serif;
         }
 
         .form {
@@ -194,6 +262,12 @@ export default function Cadastro() {
           outline: none;
         }
 
+        .input:disabled {
+          background-color: #f3f4f6;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
         .labelTitle {
           display: block;
           font-family: 'Airbnb Cereal', sans-serif;
@@ -241,6 +315,12 @@ export default function Cadastro() {
         .composedInput .dateInput:focus {
           box-shadow: none;
           outline: none;
+        }
+
+        .composedInput .dateInput:disabled {
+          background-color: transparent;
+          cursor: not-allowed;
+          opacity: 0.6;
         }
 
         .usernameWrapper .floatingLabel {
@@ -302,6 +382,11 @@ export default function Cadastro() {
           padding: 0;
           background: transparent;
           outline: none;
+        }
+
+        .composedInput.phoneContainerWrapper .phoneInput:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
         }
 
         .dateContainer {
@@ -382,6 +467,11 @@ export default function Cadastro() {
           cursor: pointer;
         }
 
+        .checkbox:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
         .checkboxLabel {
           font-size: 12px;
           color: #6b7280;
@@ -429,8 +519,16 @@ export default function Cadastro() {
         }
 
         .submitButton:disabled {
-          opacity: 0.5;
+          opacity: 0.6;
           cursor: not-allowed;
+        }
+
+        .submitButton:disabled:hover {
+          border-color: transparent;
+        }
+
+        .submitButton:disabled::before {
+          opacity: 1;
         }
 
         .divider {
@@ -494,29 +592,34 @@ export default function Cadastro() {
           z-index: 1;
         }
 
-        .facebookButton:hover {
+        .socialButton:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .facebookButton:hover:not(:disabled) {
           border-color: #1877F2;
         }
 
-        .facebookButton:hover::before {
+        .facebookButton:hover:not(:disabled)::before {
           background-color: #1877F2;
           opacity: 0.21;
         }
 
-        .appleButton:hover {
+        .appleButton:hover:not(:disabled) {
           border-color: #000000;
         }
 
-        .appleButton:hover::before {
+        .appleButton:hover:not(:disabled)::before {
           background-color: #000000;
           opacity: 0.21;
         }
 
-        .googleButton:hover {
+        .googleButton:hover:not(:disabled) {
           border-color: #F14336;
         }
 
-        .googleButton:hover::before {
+        .googleButton:hover:not(:disabled)::before {
           background-color: #F14336;
           opacity: 0.21;
         }
@@ -645,7 +748,7 @@ export default function Cadastro() {
             <img className="logo" src="/logotipo.png" alt="Logo" width="40" height="40" />
           </div>
           <div>
-            <button className="backButton">Voltar</button>
+            <button className="backButton" onClick={handleBack} disabled={isLoading}>Voltar</button>
           </div>
         </div>
       </div>
@@ -654,18 +757,38 @@ export default function Cadastro() {
           <h1 className="title">Entre e organize sua vida cáotica</h1>
           <p className="subtitle">Preencha os campos abaixo e deixe o público te achar com o dedo</p>
 
+          {errorMessage && (
+            <div className="error-message">
+              {errorMessage}
+            </div>
+          )}
+
           <form className="form" onSubmit={handleSubmit}>
             <div className="namesContainer">
               <div>
                 <div className="inputWrapper">
                   <span className="floatingLabel">PRIMEIRO NOME</span>
-                  <input type="text" name="primeiroNome" className="input" placeholder="Digite o seu nome aqui" required />
+                  <input 
+                    type="text" 
+                    name="primeiroNome" 
+                    className="input" 
+                    placeholder="Digite o seu nome aqui" 
+                    required 
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
               <div>
                 <div className="inputWrapper">
                   <span className="floatingLabel">SEGUNDO NOME</span>
-                  <input type="text" name="segundoNome" className="input" placeholder="Digite seu sobrenome aqui" required />
+                  <input 
+                    type="text" 
+                    name="segundoNome" 
+                    className="input" 
+                    placeholder="Digite seu sobrenome aqui" 
+                    required 
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
             </div>
@@ -674,9 +797,36 @@ export default function Cadastro() {
               <div className="inputWrapper">
                 <span className="floatingLabel">DATA DE NASCIMENTO</span>
                 <div className="composedInput">
-                  <input type="number" name="dia" className="dateInput" placeholder="Dia" min="1" max="31" required />
-                  <input type="number" name="mes" className="dateInput" placeholder="Mês" min="1" max="12" required />
-                  <input type="number" name="ano" className="dateInput" placeholder="Ano" required />
+                  <input 
+                    type="number" 
+                    name="dia" 
+                    className="dateInput" 
+                    placeholder="Dia" 
+                    min="1" 
+                    max="31" 
+                    required 
+                    disabled={isLoading}
+                  />
+                  <input 
+                    type="number" 
+                    name="mes" 
+                    className="dateInput" 
+                    placeholder="Mês" 
+                    min="1" 
+                    max="12" 
+                    required 
+                    disabled={isLoading}
+                  />
+                  <input 
+                    type="number" 
+                    name="ano" 
+                    className="dateInput" 
+                    placeholder="Ano" 
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    required 
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
             </div>
@@ -686,7 +836,14 @@ export default function Cadastro() {
                 <span className="floatingLabel">USERNAME</span>
                 <div className="usernameContainer">
                   <span className="atSymbol">@</span>
-                  <input type="text" name="username" className="usernameInput input" placeholder="Escolha um nome de usuário" required />
+                  <input 
+                    type="text" 
+                    name="username" 
+                    className="usernameInput input" 
+                    placeholder="Escolha um nome de usuário" 
+                    required 
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
             </div>
@@ -694,21 +851,42 @@ export default function Cadastro() {
             <div>
               <div className="inputWrapper">
                 <span className="floatingLabel">EMAIL</span>
-                <input type="email" name="email" className="input" placeholder="Digite seu email aqui" required />
+                <input 
+                  type="email" 
+                  name="email" 
+                  className="input" 
+                  placeholder="Digite seu email aqui" 
+                  required 
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
             <div>
               <div className="inputWrapper">
                 <span className="floatingLabel">SENHA</span>
-                <input type="password" name="senha" className="input" placeholder="Crie uma senha segura" required />
+                <input 
+                  type="password" 
+                  name="senha" 
+                  className="input" 
+                  placeholder="Crie uma senha segura" 
+                  required 
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
             <div>
               <div className="inputWrapper">
                 <span className="floatingLabel">CONFIRME SUA SENHA</span>
-                <input type="password" name="confirmarSenha" className="input" placeholder="Repita a senha para confirmar" required />
+                <input 
+                  type="password" 
+                  name="confirmarSenha" 
+                  className="input" 
+                  placeholder="Repita a senha para confirmar" 
+                  required 
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
@@ -721,20 +899,40 @@ export default function Cadastro() {
                       <img src="/brasil.png" alt="Brasil" width="20" height="15" />
                       <span>+55</span>
                     </div>
-                    <input type="tel" name="celular" className="phoneInput phoneInputInner" placeholder="Informe seu telefone com DDD" required />
+                    <input 
+                      type="tel" 
+                      name="celular" 
+                      className="phoneInput phoneInputInner" 
+                      placeholder="Informe seu telefone com DDD" 
+                      required 
+                      disabled={isLoading}
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="checkboxContainer">
-              <input type="checkbox" id="termos" name="termos" className="checkbox" required />
+              <input 
+                type="checkbox" 
+                id="termos" 
+                name="termos" 
+                className="checkbox" 
+                required 
+                disabled={isLoading}
+              />
               <label htmlFor="termos" className="checkboxLabel">
                 Concordo com mensagens que confiram os cortes, ligação de classificação e dados privados. Todos os dispositivos.
               </label>
             </div>
 
-            <button type="submit" className="submitButton"><span>Cadastrar</span></button>
+            <button 
+              type="submit" 
+              className="submitButton"
+              disabled={isLoading}
+            >
+              <span>{isLoading ? 'Cadastrando...' : 'Cadastrar'}</span>
+            </button>
           </form>
 
           <div className="divider">
@@ -744,17 +942,32 @@ export default function Cadastro() {
           </div>
 
           <div className="socialContainer">
-            <button type="button" className="socialButton facebookButton" onClick={() => handleSocialLogin('Facebook')}>
+            <button 
+              type="button" 
+              className="socialButton facebookButton" 
+              onClick={() => handleSocialLogin('Facebook')}
+              disabled={isLoading}
+            >
               <img src="/facebook.png" alt="Facebook" width="24" />
               <span>Continuar com Facebook</span>
             </button>
 
-            <button type="button" className="socialButton appleButton" onClick={() => handleSocialLogin('Apple')}>
+            <button 
+              type="button" 
+              className="socialButton appleButton" 
+              onClick={() => handleSocialLogin('Apple')}
+              disabled={isLoading}
+            >
               <img src="/apple.png" alt="Apple" width="24" />
               <span>Continuar com Apple</span>
             </button>
 
-            <button type="button" className="socialButton googleButton" onClick={() => handleSocialLogin('Google')}>
+            <button 
+              type="button" 
+              className="socialButton googleButton" 
+              onClick={() => handleSocialLogin('Google')}
+              disabled={isLoading}
+            >
               <img src="/google.png" alt="Google" width="24" />
               <span>Continuar com Google</span>
             </button>

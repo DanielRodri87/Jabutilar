@@ -1,6 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
+import { apiEndpoints } from '../config/api';
 
 export default function Login() {
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
     const EXIT_DURATION = 900;
     const ENTER_DURATION = 1000;
     const DISPLAY_INTERVAL = 6000;
@@ -29,46 +33,84 @@ export default function Login() {
     ];
 
     const [currentReview, setCurrentReview] = React.useState(0);
-
     const [prevReview, setPrevReview] = React.useState(null);
-
     const [entering, setEntering] = React.useState(false);
-
     const [isAnimating, setIsAnimating] = React.useState(false);
 
     const currentRef = React.useRef(currentReview);
     React.useEffect(() => { currentRef.current = currentReview; }, [currentReview]);
 
-
     function cycleReviews() {
-    if (isAnimating) return;
-    setIsAnimating(true);
+        if (isAnimating) return;
+        setIsAnimating(true);
 
-    const next = (currentRef.current + 1) % reviews.length;
+        const next = (currentRef.current + 1) % reviews.length;
 
+        setPrevReview(currentRef.current);
 
-    setPrevReview(currentRef.current);
-
-
-    setTimeout(() => {
-        setCurrentReview(next);    
-        currentRef.current = next; 
-        setPrevReview(null);    
-        setEntering(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-        setEntering(false); 
-        }));
         setTimeout(() => {
-        setEntering(false);
-        setIsAnimating(false);
-        }, ENTER_DURATION + 40);
-    }, EXIT_DURATION);
+            setCurrentReview(next);    
+            currentRef.current = next; 
+            setPrevReview(null);    
+            setEntering(true);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                setEntering(false); 
+            }));
+            setTimeout(() => {
+                setEntering(false);
+                setIsAnimating(false);
+            }, ENTER_DURATION + 40);
+        }, EXIT_DURATION);
     }
 
     React.useEffect(() => {
-    const id = setInterval(() => cycleReviews(), DISPLAY_INTERVAL);
-    return () => clearInterval(id);
+        const id = setInterval(() => cycleReviews(), DISPLAY_INTERVAL);
+        return () => clearInterval(id);
     }, []);
+
+    async function handleSubmite(event) {
+        event.preventDefault();
+        setIsLoading(true);
+        setErrorMessage('');
+
+        const formData = new FormData(event.target);
+        const email = formData.get('email');
+        const password = formData.get('password');
+
+        try {
+            const response = await fetch(apiEndpoints.login, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    senha: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                console.log('Login realizado com sucesso!', data);
+                
+                // Armazenar o token de acesso usando React state em vez de localStorage
+                // (localStorage não é suportado em artifacts)
+                
+                alert('Login realizado com sucesso!');
+                
+                // Aqui você pode adicionar lógica de redirecionamento
+                // ou atualização de estado da aplicação
+            } else {
+                setErrorMessage(data.detail || 'Erro ao realizar login. Verifique suas credenciais.');
+            }
+        } catch (error) {
+            console.error('Erro ao conectar com o servidor:', error);
+            setErrorMessage('Erro ao conectar com o servidor. Tente novamente mais tarde.');
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     return (
         <>
@@ -80,7 +122,6 @@ export default function Login() {
                     font-style: normal;
                 }
 
-                /* Book (Regular) */
                 @font-face {
                     font-family: 'Airbnb Cereal';
                     src: url('../fonts/AirbnbCereal_W_Bk.otf') format('opentype');
@@ -88,7 +129,6 @@ export default function Login() {
                     font-style: normal;
                 }
 
-                /* Medium */
                 @font-face {
                     font-family: 'Airbnb Cereal';
                     src: url('../fonts/AirbnbCereal_W_Md.otf') format('opentype');
@@ -96,7 +136,6 @@ export default function Login() {
                     font-style: normal;
                 }
 
-                /* Bold */
                 @font-face {
                     font-family: 'Airbnb Cereal';
                     src: url('../fonts/AirbnbCereal_W_Bd.otf') format('opentype');
@@ -104,7 +143,6 @@ export default function Login() {
                     font-style: normal;
                 }
 
-                /* ExtraBold */
                 @font-face {
                     font-family: 'Airbnb Cereal';
                     src: url('../fonts/AirbnbCereal_W_XBd.otf') format('opentype');
@@ -129,8 +167,8 @@ export default function Login() {
                     align-items: center;
                     gap: 20px;
                     min-height: 100vh;
-                    max-width: 1400px; /* Limita expansão excessiva em ultra-wide */
-                    margin: 0 auto; /* Centraliza o container */
+                    max-width: 1400px;
+                    margin: 0 auto;
                 }
 
                 .cardlogin {
@@ -165,7 +203,7 @@ export default function Login() {
                     font-weight: 700;
                     font-size: 42px;
                     margin-bottom: 10px;
-                    letter-spacing: -0.5px; /* diminui o espaçamento entre letras */
+                    letter-spacing: -0.5px;
                 }
 
                 .subtitle {
@@ -192,12 +230,10 @@ export default function Login() {
                     margin-bottom: 8px;
                 }
 
-                /* Wrapper para inputs com label interno (floating, fixo) */
                 .inputWrapper {
                     position: relative;
                 }
 
-                /* Label fixo dentro do input (estética do input) */
                 .floatingLabel {
                     position: absolute;
                     left: 15px;
@@ -206,7 +242,7 @@ export default function Login() {
                     font-weight: 700;
                     font-size: 14px;
                     color: #111827;
-                    pointer-events: none; /* não bloqueia o clique no input */
+                    pointer-events: none;
                     background: transparent;
                 }
 
@@ -215,7 +251,7 @@ export default function Login() {
                 }
 
                 .inputWrapper:focus-within .input,
-                    .inputWrapper:focus-within .composedInput {
+                .inputWrapper:focus-within .composedInput {
                     border-color: #667467;
                 }
 
@@ -229,17 +265,22 @@ export default function Login() {
 
                 .input {
                     width: 100%;
-                    padding: 28px 15px 10px 15px; /* padding-top maior para acomodar label */
+                    padding: 28px 15px 10px 15px;
                     border: 1px solid #d1d5db;
                     border-radius: 5px;
                     font-size: 14px;
                     outline: none;
                 }
 
+                .input:disabled {
+                    background-color: #f3f4f6;
+                    cursor: not-allowed;
+                }
+
                 .labelTitle {
                     display: block;
                     font-family: 'Airbnb Cereal', sans-serif;
-                    font-weight: 700; /* Bold */
+                    font-weight: 700;
                     font-size: 12px;
                     letter-spacing: 0.2px;
                     color: #111827;
@@ -249,14 +290,26 @@ export default function Login() {
                 .labelText {
                     display: block;
                     font-family: 'Airbnb Cereal', sans-serif;
-                    font-weight: 300; /* Lt */
+                    font-weight: 300;
                     font-size: 12px;
-                    color: rgba(17,24,39,0.5); /* 50% de opacidade sobre cor escura */
+                    color: rgba(17,24,39,0.5);
                     margin-top: 0;
                 }
 
                 .input:focus {
                     border-color: #22c55e;
+                }
+
+                .error-message {
+                    background-color: #fee;
+                    border: 1px solid #fcc;
+                    border-radius: 5px;
+                    padding: 12px;
+                    margin-bottom: 16px;
+                    color: #c33;
+                    font-size: 14px;
+                    text-align: center;
+                    font-family: 'Airbnb Cereal', sans-serif;
                 }
 
                 .buttonContainer {
@@ -265,42 +318,39 @@ export default function Login() {
 
                 .submitButton {
                     width: 100%;
-                    background-color: transparent; /* <-- importante: deixa transparente */
+                    background-color: transparent;
                     color: black;
                     font-weight: 700;
                     padding: 15px 0;
-                    border: 1px solid transparent; /* sem borda inicialmente */
+                    border: 1px solid transparent;
                     border-radius: 8px;
                     cursor: pointer;
                     font-size: 18px;
                     position: relative;
                     overflow: hidden;
-                    transition: border-color 1s ease; /* anima borda suavemente */
+                    transition: border-color 1s ease;
                     -webkit-tap-highlight-color: transparent;
                 }
 
-                /* Camada de fundo: responsável pela cor e pela opacidade */
                 .submitButton::before {
                     content: "";
                     position: absolute;
                     inset: 0;
-                    background-color: #C1D9C1; /* cor base */
-                    opacity: 1; /* normal = 100% */
-                    transition: opacity 0.3s ease; /* anima a mudança (smart animate) */
+                    background-color: #C1D9C1;
+                    opacity: 1;
+                    transition: opacity 0.3s ease;
                     z-index: 0;
-                    pointer-events: none; /* permite clicar no botão normalmente */
+                    pointer-events: none;
                 }
 
-                /* Hover: fundo passa a 21% e borda aparece */
                 .submitButton:hover::before {
-                    opacity: 0.21; /* 21% */
+                    opacity: 0.21;
                 }
 
                 .submitButton:hover {
-                    border-color: #667467; /* borda desejada no hover */
+                    border-color: #667467;
                 }
 
-                /* Texto acima do overlay */
                 .submitButton span {
                     position: relative;
                     z-index: 1;
@@ -308,8 +358,16 @@ export default function Login() {
                 }
 
                 .submitButton:disabled {
-                    opacity: 0.5;
+                    opacity: 0.6;
                     cursor: not-allowed;
+                }
+
+                .submitButton:disabled:hover {
+                    border-color: transparent;
+                }
+
+                .submitButton:disabled::before {
+                    opacity: 1;
                 }
 
                 .signup-link {
@@ -340,11 +398,11 @@ export default function Login() {
                 }
 
                 .backgroundlogin img {
-                    margin-left: -90px; /* margem para alinhar um pouco afastado do card */
+                    margin-left: -90px;
                     width: 100%;
                     max-width: 780px;
                     border-radius: 20px;
-                    filter: blur(0px); /* ajuste se necessário para o efeito de blur na borda */
+                    filter: blur(0px);
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
                 }
 
@@ -355,7 +413,7 @@ export default function Login() {
                     font-family: 'Airbnb Cereal', sans-serif;
                     font-weight: 400;
                     text-align: left;
-                    margin-left: -400px; /* margem para alinhar um pouco afastado do card */
+                    margin-left: -400px;
                 }
 
                 .explore-text img {
@@ -369,43 +427,43 @@ export default function Login() {
                 .features-container {
                     display: flex;
                     flex-direction: row;
-                    justify-content: space-around; /* Distribui os itens uniformemente com espaçamento */
-                    align-items: flex-start; /* Alinha o topo dos itens */
-                    gap: 40px; /* Espaçamento fixo entre os itens (ajuste se necessário) */
-                    max-width: 1400px; /* Limita a largura total para evitar esticamento excessivo */
+                    justify-content: space-around;
+                    align-items: flex-start;
+                    gap: 40px;
+                    max-width: 1400px;
                     margin-top: -80px;
                     margin-left: 40px;
-                    padding: 0 20px; /* Padding lateral para telas menores */
+                    padding: 0 20px;
                 }
 
                 .feature-item {
-                    flex: 1; /* Cada item ocupa espaço igual */
-                    text-align: left; /* Centraliza texto e imagem */
-                    max-width: 400px; /* Limita largura de cada item para melhor responsividade */
+                    flex: 1;
+                    text-align: left;
+                    max-width: 400px;
                 }
 
                 .feature-item img {
                     width: 10%;
                     height: auto;
-                    margin-bottom: 16px; /* Espaçamento entre imagem e título */
-                    border-radius: 8px; /* Bordas arredondadas opcionais para as imagens */
+                    margin-bottom: 16px;
+                    border-radius: 8px;
                 }
 
                 .feature-title {
                     font-family: 'Airbnb Cereal', sans-serif;
-                    font-weight: 700; /* Bold */
-                    font-size: 20px; /* Tamanho ajustado para legibilidade */
+                    font-weight: 700;
+                    font-size: 20px;
                     margin-bottom: 8px;
-                    color: #111827; /* Cor escura para contraste */
+                    color: #111827;
                     letter-spacing: -0.2px;
                 }
 
                 .feature-text {
                     font-family: 'Airbnb Cereal', sans-serif;
-                    font-weight: 300; /* Light (Lt) */
+                    font-weight: 300;
                     font-size: 14px;
-                    color: #6b7280; /* Cor cinza para subtítulo */
-                    line-height: 1.5; /* Melhora legibilidade */
+                    color: #6b7280;
+                    line-height: 1.5;
                 }
 
                 .contact-container {
@@ -415,7 +473,7 @@ export default function Login() {
                     background: url('/mapa.png') no-repeat center center;
                     background-size: cover;
                     display: flex;
-                    justify-content: flex-end; /* card AGORA à direita */
+                    justify-content: flex-end;
                     align-items: center;
                     margin-top: 80px;
                     border-radius: 20px;
@@ -425,19 +483,19 @@ export default function Login() {
                 .contact-overlay {
                     position: absolute;
                     inset: 0;
-                    background: rgba(255, 255, 255, 0.05); /* leve filtro sobre o mapa */
+                    background: rgba(255, 255, 255, 0.05);
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end; /* alinhamento do card à direita */
-                    padding-right: 100px; /* distância da borda direita */
+                    justify-content: flex-end;
+                    padding-right: 100px;
                 }
 
                 .contact-card {
-                    background-color: rgba(255, 255, 255, 0.92); /* 92% opacidade */
+                    background-color: rgba(255, 255, 255, 0.92);
                     border-radius: 35px;
                     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
                     padding: 50px 55px;
-                    width: 560px; /* aumentei de 500px para 560px */
+                    width: 560px;
                     z-index: 2;
                 }
 
@@ -457,7 +515,7 @@ export default function Login() {
 
                 .namesRow {
                     display: flex;
-                    gap: 18px; /* espaço entre Nome e Sobrenome */
+                    gap: 18px;
                     width: 100%;
                 }
 
@@ -466,11 +524,9 @@ export default function Login() {
                     width: 100%;
                 }
 
-                /* aumenta o tamanho efetivo dos dois campos */
                 .namesRow .inputWrapper input {
-                    width: 100%;  /* alarga visualmente o input */
+                    width: 100%;
                 }
-
 
                 .phoneContainerWrapper {
                     width: 100%;
@@ -506,11 +562,10 @@ export default function Login() {
                     color: rgba(17, 24, 39, 0.5);
                 }
 
-                /* --- Ajuste do label do campo CELULAR --- */
                 .inputWrapper .floatingLabel {
                     position: absolute;
                     left: 15px;
-                    top: 6px; /* subiu um pouco o label (antes 10px) */
+                    top: 6px;
                     font-family: 'Airbnb Cereal', sans-serif;
                     font-weight: 700;
                     font-size: 14px;
@@ -525,9 +580,8 @@ export default function Login() {
                     line-height: 48px;
                 }
 
-                /* Move o conteúdo visual (bandeira, +55 e placeholder) um pouco para baixo */
                 .loweredPhoneInput {
-                    padding-top: 18px;  /* empurra o texto e o conteúdo para baixo */
+                    padding-top: 18px;
                 }
 
                 .phoneContainer .countryCode {
@@ -536,7 +590,6 @@ export default function Login() {
                     padding-top: 12px;
                 }
 
-                /* --- SEÇÃO DE RECOMENDAÇÕES --- */
                 .reviews-container {
                     position: relative;
                     width: 100%;
@@ -547,10 +600,9 @@ export default function Login() {
                     overflow: hidden;
                     margin-top: 100px;
                     margin-bottom: -100px;
-                    background-color: #ffffff; /* fundo branco */
+                    background-color: #ffffff;
                 }
 
-                /* Review base */
                 .review-item {
                     position: absolute;
                     opacity: 0;
@@ -625,12 +677,12 @@ export default function Login() {
                 }
 
                 .footer {
-                    width: 100vw; /* ocupar toda a largura da viewport */
+                    width: 100vw;
                     box-sizing: border-box;
                     position: relative;
                     bottom: 0;
-                    left: 0;  /* garante que comece do início da tela */
-                    margin: 0; /* remove qualquer margem extra */
+                    left: 0;
+                    margin: 0;
                 }
 
                 .jabutilar {
@@ -646,17 +698,15 @@ export default function Login() {
                     margin-left: 20px;
                 }
 
-                /* Conteúdo principal ocupa todo espaço disponível */
                 .main-content {
-                    flex: 1; /* força o conteúdo a ocupar o espaço restante */
+                    flex: 1;
                 }
 
-                /* Footer */
                 .footer {
                     margin-top: 48px;
                     width: 100%;
                     background-color: #fafafaff;
-                    padding: 32px 0 32px 16px; /* remove padding direito para aproximar da borda */
+                    padding: 32px 0 32px 16px;
                     box-sizing: border-box;
                     display: flex;
                     justify-content: space-between;
@@ -664,13 +714,12 @@ export default function Login() {
                     gap: 24px;
                 }
 
-                /* Footer Left */
                 .footerLeft {
                     display: flex;
                     flex-direction: column;
                     align-items: flex-start;
                     gap: 8px;
-                    margin-left: 0px; /* aproxima do limite esquerdo da página */
+                    margin-left: 0px;
                 }
 
                 .footerLeft .logoText {
@@ -687,7 +736,6 @@ export default function Login() {
                     margin: 0;
                 }
 
-                /* Footer Info */
                 .footerInfo {
                     display: flex;
                     align-items: center;
@@ -710,7 +758,6 @@ export default function Login() {
                     color: #22c55e;
                 }
 
-                /* Footer Center */
                 .footerCenter {
                     margin-left: 100%;
                     justify-content: center;
@@ -722,12 +769,10 @@ export default function Login() {
                     height: auto;
                 }
 
-                /* Footer Right */
                 .footerRight {
-                    margin-left: 150%; /* garante sem margem extra */
+                    margin-left: 150%;
                 }
 
-                /* Redes sociais */
                 .socialLinks {
                     display: flex;
                     gap: 7px;
@@ -760,23 +805,49 @@ export default function Login() {
                         <h1 className="title">Casa organizada, caos controlado</h1>
                         <p className="subtitle">Entre agora e tenha toda a vida doméstica em um só lugar, sem complicações.</p>
 
+                        {errorMessage && (
+                            <div className="error-message">
+                                {errorMessage}
+                            </div>
+                        )}
+
                         <form className="form" onSubmit={handleSubmite}>
                             <div className="namesContainer">
                                 <div>
                                     <div className="inputWrapper">
                                         <span className="floatingLabel">EMAIL</span>
-                                        <input type="email" name="email" className="input" placeholder="Digite o seu email aqui" required />
+                                        <input 
+                                            type="email" 
+                                            name="email" 
+                                            className="input" 
+                                            placeholder="Digite o seu email aqui" 
+                                            required 
+                                            disabled={isLoading}
+                                        />
                                     </div>
                                 </div>
                                 <div>
                                     <div className="inputWrapper">
                                         <span className="floatingLabel">SENHA</span>
-                                        <input type="password" name="password" className="input" placeholder="Digite a sua senha aqui" required />
+                                        <input 
+                                            type="password" 
+                                            name="password" 
+                                            className="input" 
+                                            placeholder="Digite a sua senha aqui" 
+                                            required 
+                                            disabled={isLoading}
+                                        />
                                     </div>
                                 </div>
                             </div>
                             <div className="buttonContainer">
-                                <button type="submit" className="submitButton"><span>Login</span></button>
+                                <button 
+                                    type="submit" 
+                                    className="submitButton"
+                                    disabled={isLoading}
+                                >
+                                    <span>{isLoading ? 'Entrando...' : 'Login'}</span>
+                                </button>
                             </div>
                             <p className="signup-link">
                                 Não possui cadastro? <a href="/cadastro">Cadastre-se</a>
@@ -861,7 +932,6 @@ export default function Login() {
                         </div>
                         </div>
 
-
                         <div>
                         <div className="inputWrapper">
                             <span className="floatingLabel">EMAIL</span>
@@ -903,7 +973,6 @@ export default function Login() {
 
                 <footer className="footer">
                 <div className="footerContainer">
-                    {/* Esquerda */}
                     <div className="footerLeft">
                     <img className="jabutilar" src="/jabutilar.png" alt="jabutilar"/>
                     <p>© JabutiLar Inc.<br />All rights reserved</p>
@@ -918,12 +987,10 @@ export default function Login() {
                     </div>
                     </div>
 
-                    {/* Centro */}
                     <div className="footerCenter">
                     <img src="/jabuti.png" alt="Logo Jabuti" />
                     </div>
 
-                    {/* Direita */}
                     <div className="footerRight">
                     <div className="socialLinks">
                         <a href="#"><img src="/instagramblack.png" alt="Instagram" /></a>
@@ -938,17 +1005,4 @@ export default function Login() {
             </div>
         </>
     );
-}
-
-function handleSubmite(event){
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const email = formData.get('email');
-    const password = formData.get('password');
-
-    console.log({
-        email,
-        password,
-    });
-    alert('Login realizado com sucesso!');
 }
