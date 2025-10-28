@@ -1,3 +1,8 @@
+docker compose build
+docker compose up
+
+http://localhost:3000
+http://localhost:8000
 
 {
   "email": "flavio@gmail.com",
