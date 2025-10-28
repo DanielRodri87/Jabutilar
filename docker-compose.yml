@@ -1,0 +1,32 @@
+version: '3.9'
+services:
+  backend:
+    # Constrói a imagem a partir do Dockerfile localizado em ./server/backend
+    build: ./server/backend
+    container_name: backend
+    # Mapeia a porta 8000 do container para a porta 8000 da máquina hospedeira
+    ports:
+      - "8000:8000"
+    # Carrega variáveis de ambiente do arquivo .env
+    env_file:
+      - ./server/backend/.env
+    # CORREÇÃO CRÍTICA DO VOLUME: Mapeia o diretório de código-fonte (server/backend/backend)
+    # para a pasta de pacote dentro do container (/app/backend).
+    volumes:
+      - ./server/backend/backend:/app/backend
+    restart: always
+
+  frontend:
+    # Constrói a imagem a partir do Dockerfile localizado em ./client/frontend
+    build: ./client/frontend
+    container_name: frontend
+    # Mapeia a porta 3000 do container para a porta 3000 da máquina hospedeira
+    ports:
+      - "3000:3000"
+    environment:
+      # A URL de API pública que o Next.js usará (acessível pelo navegador)
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    # Garante que o backend suba antes do frontend
+    depends_on:
+      - backend
+    restart: always
