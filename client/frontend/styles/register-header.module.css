@@ -1,0 +1,23 @@
+.header {
+  composes: headerBase from './header.module.css';
+}
+
+.logoWrapper {
+  composes: logoBase from './header.module.css';
+}
+
+.logo {
+  composes: logo from './header.module.css';
+}
+
+.backButton {
+  composes: button from './header.module.css';
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.backButton:hover {
+  background-color: #f5f5f5;
+}

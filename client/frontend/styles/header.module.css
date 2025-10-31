@@ -1,0 +1,50 @@
+/* Estilos base para todos os headers */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #fff;
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.logoText {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Estilos específicos para o header principal */
+.profileBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.profileImg {
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+}

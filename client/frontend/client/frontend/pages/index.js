@@ -16,21 +16,21 @@ export default function Home() {
       <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '30px' }}>
         Sistema de Cadastro
       </p>
-      <button
-        onClick={() => (window.location.href = "/cadastro")}
+      <a 
+        href="/cadastro"
         style={{
           backgroundColor: '#22c55e',
           color: 'white',
           padding: '12px 32px',
           borderRadius: '6px',
-          border: 'none',
+          textDecoration: 'none',
           fontSize: '16px',
           fontWeight: 'bold',
           cursor: 'pointer'
         }}
       >
         Ir para Cadastro →
-      </button>
+      </a>
     </div>
   );
 }

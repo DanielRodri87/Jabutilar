@@ -1,0 +1,23 @@
+/* Utilitários reutilizáveis */
+.flexBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flexCenter {
+  display: flex;
+  align-items: center;
+}
+
+.headerPadding {
+  padding: 1rem 2rem;
+}
+
+.bgWhite {
+  background-color: #fff;
+}
+
+.cursorPointer {
+  cursor: pointer;
+}
