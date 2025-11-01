@@ -1,9 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export const apiEndpoints = {
-  login: `${API_BASE_URL}/`,
   cadastro: `${API_BASE_URL}/cadastro`,
-  cadastroGrupo: `${API_BASE_URL}/grupo`,
+  login: `${API_BASE_URL}/`,
+  
+  // Endpoints para autenticação social
+  auth: {
+    google: `${API_BASE_URL}/auth/google`,
+    facebook: `${API_BASE_URL}/auth/facebook`,
+    apple: `${API_BASE_URL}/auth/apple`,
+  }
 };
-
-export default API_BASE_URL;
