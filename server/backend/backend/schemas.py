@@ -14,6 +14,15 @@ class LoginRequest(BaseModel):
     email: str
     senha: str
 
+class SocialAuthRequest(BaseModel):
+    """Schema para requisições de autenticação social"""
+    provider: str  # google, facebook, apple
+    access_token: str
+    id_token: Optional[str] = None
+    email: Optional[str] = None
+    nome: Optional[str] = None
+    username: Optional[str] = None
+
 # ==================== ITENS DE COMPRA ====================
 class ItemCompraBase(BaseModel):
     nome: str

@@ -4,6 +4,11 @@ import { apiEndpoints } from '../config/api';
 export default function Cadastro() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [socialLoading, setSocialLoading] = useState({
+    google: false,
+    facebook: false,
+    apple: false
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -64,9 +69,41 @@ export default function Cadastro() {
     }
   }
 
-  function handleSocialLogin(provider) {
-    console.log(`Login com ${provider}`);
-    alert(`Login com ${provider} ainda não implementado.`);
+  async function handleSocialLogin(provider) {
+    try {
+      setSocialLoading(prev => ({ ...prev, [provider]: true }));
+      setErrorMessage('');
+      
+      console.log(`Iniciando login com ${provider}`);
+      
+      // Obter URL de autenticação OAuth
+      const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao obter URL de autenticação: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Redirecionar para a URL de autenticação do provider
+      if (data.url) {
+        // Salvar o provider no sessionStorage para usar após o callback
+        sessionStorage.setItem('oauth_provider', provider);
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de autenticação não disponível');
+      }
+      
+    } catch (error) {
+      console.error(`Erro ao conectar com ${provider}:`, error);
+      setErrorMessage(`Erro ao conectar com ${provider}. Tente novamente.`);
+      setSocialLoading(prev => ({ ...prev, [provider]: false }));
+    }
   }
 
   function handleBack() {
@@ -941,37 +978,43 @@ export default function Cadastro() {
             <div className="dividerLine"></div>
           </div>
 
-          <div className="socialContainer">
-            <button 
-              type="button" 
-              className="socialButton facebookButton" 
-              onClick={() => handleSocialLogin('Facebook')}
-              disabled={isLoading}
-            >
-              <img src="/facebook.png" alt="Facebook" width="24" />
-              <span>Continuar com Facebook</span>
-            </button>
+        <div className="socialContainer">
+          <button 
+            type="button" 
+            className="socialButton facebookButton" 
+            onClick={() => handleSocialLogin('facebook')}
+            disabled={isLoading || socialLoading.facebook}
+          >
+            <img src="/facebook.png" alt="Facebook" width="24" />
+            <span>
+              {socialLoading.facebook ? 'Conectando...' : 'Continuar com Facebook'}
+            </span>
+          </button>
 
-            <button 
-              type="button" 
-              className="socialButton appleButton" 
-              onClick={() => handleSocialLogin('Apple')}
-              disabled={isLoading}
-            >
-              <img src="/apple.png" alt="Apple" width="24" />
-              <span>Continuar com Apple</span>
-            </button>
+          <button 
+            type="button" 
+            className="socialButton appleButton" 
+            onClick={() => handleSocialLogin('apple')}
+            disabled={isLoading || socialLoading.apple}
+          >
+            <img src="/apple.png" alt="Apple" width="24" />
+            <span>
+              {socialLoading.apple ? 'Conectando...' : 'Continuar com Apple'}
+            </span>
+          </button>
 
-            <button 
-              type="button" 
-              className="socialButton googleButton" 
-              onClick={() => handleSocialLogin('Google')}
-              disabled={isLoading}
-            >
-              <img src="/google.png" alt="Google" width="24" />
-              <span>Continuar com Google</span>
-            </button>
-          </div>
+          <button 
+            type="button" 
+            className="socialButton googleButton" 
+            onClick={() => handleSocialLogin('google')}
+            disabled={isLoading || socialLoading.google}
+          >
+            <img src="/google.png" alt="Google" width="24" />
+            <span>
+              {socialLoading.google ? 'Conectando...' : 'Continuar com Google'}
+            </span>
+          </button>
+        </div>
         </div>
 
         <footer className="footer">

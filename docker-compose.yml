@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   backend:
     # Constrói a imagem a partir do Dockerfile localizado em ./server/backend
@@ -20,9 +19,9 @@ services:
     # Constrói a imagem a partir do Dockerfile localizado em ./client/frontend
     build: ./client/frontend
     container_name: frontend
-    # Mapeia a porta 3000 do container para a porta 3000 da máquina hospedeira
+    # Mapeia a porta 3000 do container para a porta 3001 da máquina hospedeira
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       # A URL de API pública que o Next.js usará (acessível pelo navegador)
       - NEXT_PUBLIC_API_URL=http://localhost:8000

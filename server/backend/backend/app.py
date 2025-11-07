@@ -9,6 +9,7 @@ from .schemas import (
     TarefasBase,
     GrupoBase,
     ContasBase
+    # SocialAuthRequest  # Adicione esta linha quando implementar autenticação social
 )
 from .user import cadastrar_usuario, login_usuario
 from .item_compra import (
@@ -73,6 +74,24 @@ def cadastro(req: CadastroRequest):
 def login(req: LoginRequest):
     """Realizar login de usuário"""
     return login_usuario(req)
+
+# ==================== Rotas de Autenticação Social ====================
+# TEMPORARIAMENTE COMENTADO - Implementar quando necessário
+# @app.get("/auth/{provider}/url", tags=["Autenticação Social"])
+# def obter_url_oauth(provider: str):
+#     """
+#     Obtém a URL para iniciar o fluxo OAuth com o provider especificado
+#     Providers suportados: google, facebook, apple
+#     """
+#     return get_oauth_url(provider)
+
+# @app.post("/auth/social", tags=["Autenticação Social"])
+# def autenticar_social(req: SocialAuthRequest):
+#     """
+#     Realiza autenticação usando providers sociais
+#     O Supabase gerencia automaticamente o fluxo OAuth
+#     """
+#     return login_social(req)
 
 # ==================== Rotas de Itens de Compra (CRUD) ====================
 @app.post("/itens-compra", response_model=dict, tags=["Itens de Compra"])
