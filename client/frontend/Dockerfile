@@ -5,7 +5,9 @@ WORKDIR /app
 
 # Copia arquivos necessários
 COPY package*.json ./
-RUN npm install
+
+# Remove o package-lock.json se existir e faz uma instalação limpa
+RUN rm -f package-lock.json && npm install
 
 # Copia o restante do código
 COPY . .
