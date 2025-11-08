@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { apiEndpoints } from '../config/api';
+import { getAuthUrl } from '../config/oauth';
 
 export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
@@ -123,7 +124,50 @@ export default function Login() {
             
             console.log(`Iniciando login com ${provider}`);
             
-            // Obter URL de autenticação OAuth
+            if (provider === 'facebook' && typeof window !== 'undefined') {
+                // Use direct Facebook OAuth URL with popup
+                const authUrl = getAuthUrl('facebook');
+                if (authUrl) {
+                    // Salvar o provider no sessionStorage para usar após o callback
+                    sessionStorage.setItem('oauth_provider', provider);
+                    
+                    // Calcular posição central
+                    const width = 600;
+                    const height = 600;
+                    const left = (window.screen.width / 2) - (width / 2);
+                    const top = (window.screen.height / 2) - (height / 2);
+                    
+                    // Abrir popup centralizado
+                    const popup = window.open(
+                        authUrl,
+                        'facebook-login',
+                        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
+                    );
+                    
+                    // Monitorar o popup para detectar quando fecha
+                    const checkClosed = setInterval(() => {
+                        if (popup.closed) {
+                            clearInterval(checkClosed);
+                            setSocialLoading(prev => ({ ...prev, [provider]: false }));
+                            
+                            // Verificar se houve sucesso no login
+                            const authResult = sessionStorage.getItem('facebook_auth_result');
+                            if (authResult === 'success') {
+                                sessionStorage.removeItem('facebook_auth_result');
+                                // Redirecionar para /home em vez de mostrar alert
+                                window.location.href = '/home';
+                            } else if (authResult === 'error') {
+                                sessionStorage.removeItem('facebook_auth_result');
+                                setErrorMessage('Erro no login com Facebook. Tente novamente.');
+                            }
+                        }
+                    }, 1000);
+                    
+                    return;
+                }
+            }
+            
+            // Fallback to backend OAuth URL for other providers or if direct URL fails
             const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
                 method: 'GET',
                 headers: {
@@ -137,11 +181,30 @@ export default function Login() {
 
             const data = await response.json();
             
-            // Redirecionar para a URL de autenticação do provider
-            if (data.url) {
+            // Redirecionar para a URL de autenticação do provider usando popup centralizado
+            if (data.url && typeof window !== 'undefined') {
                 // Salvar o provider no sessionStorage para usar após o callback
                 sessionStorage.setItem('oauth_provider', provider);
-                window.location.href = data.url;
+                
+                // Calcular posição central
+                const width = 600;
+                const height = 600;
+                const left = (window.screen.width / 2) - (width / 2);
+                const top = (window.screen.height / 2) - (height / 2);
+                
+                const popup = window.open(
+                    data.url,
+                    `${provider}-login`,
+                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
+                );
+                
+                // Monitorar o popup para detectar quando fecha
+                const checkClosed = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(checkClosed);
+                        setSocialLoading(prev => ({ ...prev, [provider]: false }));
+                    }
+                }, 1000);
             } else {
                 throw new Error('URL de autenticação não disponível');
             }
