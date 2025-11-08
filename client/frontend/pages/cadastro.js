@@ -6,8 +6,7 @@ export default function Cadastro() {
   const [errorMessage, setErrorMessage] = useState('');
   const [socialLoading, setSocialLoading] = useState({
     google: false,
-    facebook: false,
-    apple: false
+    facebook: false
   });
 
   async function handleSubmit(e) {
@@ -643,15 +642,6 @@ export default function Cadastro() {
           opacity: 0.21;
         }
 
-        .appleButton:hover:not(:disabled) {
-          border-color: #000000;
-        }
-
-        .appleButton:hover:not(:disabled)::before {
-          background-color: #000000;
-          opacity: 0.21;
-        }
-
         .googleButton:hover:not(:disabled) {
           border-color: #F14336;
         }
@@ -988,18 +978,6 @@ export default function Cadastro() {
             <img src="/facebook.png" alt="Facebook" width="24" />
             <span>
               {socialLoading.facebook ? 'Conectando...' : 'Continuar com Facebook'}
-            </span>
-          </button>
-
-          <button 
-            type="button" 
-            className="socialButton appleButton" 
-            onClick={() => handleSocialLogin('apple')}
-            disabled={isLoading || socialLoading.apple}
-          >
-            <img src="/apple.png" alt="Apple" width="24" />
-            <span>
-              {socialLoading.apple ? 'Conectando...' : 'Continuar com Apple'}
             </span>
           </button>
 

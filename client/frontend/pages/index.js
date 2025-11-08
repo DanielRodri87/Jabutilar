@@ -4,6 +4,10 @@ import { apiEndpoints } from '../config/api';
 export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [socialLoading, setSocialLoading] = useState({
+        google: false,
+        facebook: false
+    });
 
     const EXIT_DURATION = 900;
     const ENTER_DURATION = 1000;
@@ -109,6 +113,43 @@ export default function Login() {
             setErrorMessage('Erro ao conectar com o servidor. Tente novamente mais tarde.');
         } finally {
             setIsLoading(false);
+        }
+    }
+
+    async function handleSocialLogin(provider) {
+        try {
+            setSocialLoading(prev => ({ ...prev, [provider]: true }));
+            setErrorMessage('');
+            
+            console.log(`Iniciando login com ${provider}`);
+            
+            // Obter URL de autenticação OAuth
+            const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro ao obter URL de autenticação: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            // Redirecionar para a URL de autenticação do provider
+            if (data.url) {
+                // Salvar o provider no sessionStorage para usar após o callback
+                sessionStorage.setItem('oauth_provider', provider);
+                window.location.href = data.url;
+            } else {
+                throw new Error('URL de autenticação não disponível');
+            }
+            
+        } catch (error) {
+            console.error(`Erro ao conectar com ${provider}:`, error);
+            setErrorMessage(`Erro ao conectar com ${provider}. Tente novamente.`);
+            setSocialLoading(prev => ({ ...prev, [provider]: false }));
         }
     }
 
@@ -790,6 +831,90 @@ export default function Login() {
                 .socialLinks img:hover {
                     opacity: 0.7;
                 }
+
+                .divider {
+                    margin: 24px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .dividerLine {
+                    flex: 1;
+                    height: 1px;
+                    background-color: #d1d5db;
+                }
+
+                .dividerText {
+                    font-size: 14px;
+                    color: #9ca3af;
+                    white-space: nowrap;
+                }
+
+                .socialContainer {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .socialButton {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    border: 1px solid #d1d5db;
+                    padding: 12px 16px;
+                    border-radius: 6px;
+                    background-color: transparent;
+                    cursor: pointer;
+                    transition: border-color 1s ease;
+                    font-size: 14px;
+                    font-weight: 600;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .socialButton::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background-color: #ffffff;
+                    opacity: 1;
+                    transition: background-color 1s ease, opacity 1s ease;
+                    z-index: 0;
+                    pointer-events: none;
+                }
+
+                .socialButton span,
+                .socialButton img,
+                .socialButton svg {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .socialButton:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .facebookButton:hover:not(:disabled) {
+                    border-color: #1877F2;
+                }
+
+                .facebookButton:hover:not(:disabled)::before {
+                    background-color: #1877F2;
+                    opacity: 0.21;
+                }
+
+                .googleButton:hover:not(:disabled) {
+                    border-color: #F14336;
+                }
+
+                .googleButton:hover:not(:disabled)::before {
+                    background-color: #F14336;
+                    opacity: 0.21;
+                }
             `}</style>
 
             <div>
@@ -853,6 +978,38 @@ export default function Login() {
                                 Não possui cadastro? <a href="/cadastro">Cadastre-se</a>
                             </p>
                         </form>
+
+                        <div className="divider">
+                            <div className="dividerLine"></div>
+                            <span className="dividerText">ou continue com</span>
+                            <div className="dividerLine"></div>
+                        </div>
+
+                        <div className="socialContainer">
+                            <button 
+                                type="button" 
+                                className="socialButton facebookButton" 
+                                onClick={() => handleSocialLogin('facebook')}
+                                disabled={isLoading || socialLoading.facebook}
+                            >
+                                <img src="/facebook.png" alt="Facebook" width="24" />
+                                <span>
+                                    {socialLoading.facebook ? 'Conectando...' : 'Continuar com Facebook'}
+                                </span>
+                            </button>
+
+                            <button 
+                                type="button" 
+                                className="socialButton googleButton" 
+                                onClick={() => handleSocialLogin('google')}
+                                disabled={isLoading || socialLoading.google}
+                            >
+                                <img src="/google.png" alt="Google" width="24" />
+                                <span>
+                                    {socialLoading.google ? 'Conectando...' : 'Continuar com Google'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
                     <div className="backgroundlogin">
                         <img src="/loginbackground.png" alt="Background" />
