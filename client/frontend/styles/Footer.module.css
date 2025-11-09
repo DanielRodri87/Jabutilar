@@ -1,146 +1,114 @@
 .footer {
-  margin-top: 48px;
-  background-color: #f3f4f6;
-  padding: 32px 16px;
+    width: 100vw;
+    box-sizing: border-box;
+    position: relative;
+    bottom: 0;
+    left: 0;
+    margin: 0;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+.jabutilar {
+    width: 120px;
+    height: auto;
 }
 
-.content {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
-  align-items: start;
+.footerContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    max-width: 1200px;
+    margin-left: 20px;
 }
 
-.left {
-  text-align: left;
+.main-content {
+    flex: 1;
 }
 
-.center {
-  display: flex;
-  justify-content: center;
+.footer {
+    margin-top: 48px;
+    width: 100%;
+    background-color: #fafafaff;
+    padding: 32px 0 32px 16px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
 }
 
-.center img {
-  object-fit: contain;
+.footerLeft {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-left: 0px;
 }
 
-.right {
-  display: flex;
-  justify-content: flex-end;
+.footerLeft .logoText {
+    font-family: 'Airbnb Cereal', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: #000;
 }
 
-.logoSection {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+.footerLeft p {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
 }
 
-.logoSection img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
+.footerInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.logoText {
-  font-weight: bold;
-  font-size: 14px;
+.footerInfo img {
+    width: 18px;
+    height: 18px;
 }
 
-.copyright,
-.rights {
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
+.footerInfo span,
+.footerInfo a {
+    font-size: 13px;
+    color: #333;
+    text-decoration: none;
 }
 
-.copyright {
-  margin-bottom: 4px;
+.footerInfo a:hover {
+    color: #22c55e;
+}
+
+.footerCenter {
+    margin-left: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.footerCenter img {
+    width: 150px;
+    height: auto;
+}
+
+.footerRight {
+    margin-left: 150%;
 }
 
 .socialLinks {
-  display: flex;
-  gap: 12px;
-}
-
-.socialLink {
-  display: inline-block;
-  opacity: 1;
-  transition: opacity 0.2s;
-}
-
-.socialLink:hover {
-  opacity: 0.7;
-}
-
-.socialLink img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.bottom {
-  border-top: 1px solid #d1d5db;
-  padding-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: center;
-  text-align: center;
-}
-
-.info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-}
-
-.info img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.infoText {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.phone {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.phone:hover {
-  color: #22c55e;
-}
-
-@media (max-width: 768px) {
-  .content {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .left,
-  .right {
-    text-align: center;
-  }
-
-  .right {
+    display: flex;
+    gap: 7px;
     justify-content: center;
-  }
+    align-items: center;
+}
 
-  .bottom {
-    flex-direction: column;
-    gap: 12px;
-  }
+.socialLinks img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    transition: opacity 0.2s;
+}
+
+.socialLinks img:hover {
+    opacity: 0.7;
 }
