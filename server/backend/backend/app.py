@@ -52,16 +52,12 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Next.js development
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["*"],   # <-- libera qualquer frontend acessar (temporariamente)
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],  # Permite todos os headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ==================== Rotas de Autenticação ====================
