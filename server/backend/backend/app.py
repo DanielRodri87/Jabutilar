@@ -8,7 +8,8 @@ from .schemas import (
     ItemCompraResponse,
     TarefasBase,
     GrupoBase,
-    ContasBase
+    ContasBase,
+    ListaCompras
     # SocialAuthRequest  # Adicione esta linha quando implementar autenticação social
 )
 from .user import cadastrar_usuario, login_usuario
@@ -42,6 +43,14 @@ from .contas import (
     listar_contas,
     obter_conta,
     deletar_conta
+)
+
+from .lista_compras import (
+    criar_lista_compra,
+    listar_listas_compra,
+    obter_lista_compra,
+    atualizar_lista_compra,
+    deletar_lista_compra
 )
 
 from typing import List, Optional
@@ -196,3 +205,30 @@ def atualizar_dados_conta(conta_id: int, conta: ContasBase):
 def excluir_dados_conta(conta_id: int):
     """Excluir uma conta existente"""
     return deletar_conta(conta_id)
+
+# caminhos lista compras
+
+@app.post("/listacompra", response_model=dict, tags=["Listacompra"])
+def criar_nova_lista(lista: ListaCompras):
+    """Criar uma nova Lista de Compras"""
+    return criar_lista_compra(lista)
+
+@app.get("/listacompra", response_model=dict, tags=["Listacompra"])
+def listar_listas(id_group: Optional[int] = Query(None), id_item: Optional[int] = Query(None), status: Optional[bool] = Query(None)):
+    """Listar listas de compras (filtros opcionais)."""
+    return listar_listas_compra(id_group, id_item, status)
+
+@app.get("/listacompra/{lista_id}", response_model=dict, tags=["Listacompra"])
+def obter_lista(lista_id: int):
+    """Obter lista de compras por ID."""
+    return obter_lista_compra(lista_id)
+
+@app.put("/listacompra/{lista_id}", response_model=dict, tags=["Listacompra"])
+def atualizar_lista(lista_id: int, lista: ListaCompras):
+    """Atualizar lista de compras por ID."""
+    return atualizar_lista_compra(lista_id, lista)
+
+@app.delete("/listacompra/{lista_id}", response_model=dict, tags=["Listacompra"])
+def excluir_lista(lista_id: int):
+    """Excluir lista de compras por ID."""
+    return deletar_lista_compra(lista_id)

@@ -84,3 +84,13 @@ class ContasBase(BaseModel):
     grupo_id: int
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None
+
+# =============== LISTA DE COMPRAS ================
+
+class ListaCompras(BaseModel):
+    descricao: str
+    status: Optional[bool]
+    created_at: Optional[datetime] = None
+    update_at: Optional[datetime] = None
+    id_item: int
+    id_group: int
