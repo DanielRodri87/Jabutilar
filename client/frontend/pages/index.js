@@ -102,10 +102,8 @@ export default function Login() {
                 // Armazenar o token de acesso usando React state em vez de localStorage
                 // (localStorage não é suportado em artifacts)
                 
-                alert('Login realizado com sucesso!');
-                
-                // Aqui você pode adicionar lógica de redirecionamento
-                // ou atualização de estado da aplicação
+                // Redirecionar para a tela main.js
+                window.location.href = '/main';
             } else {
                 setErrorMessage(data.detail || 'Erro ao realizar login. Verifique suas credenciais.');
             }
@@ -154,8 +152,8 @@ export default function Login() {
                             const authResult = sessionStorage.getItem('facebook_auth_result');
                             if (authResult === 'success') {
                                 sessionStorage.removeItem('facebook_auth_result');
-                                // Redirecionar para /home em vez de mostrar alert
-                                window.location.href = '/home';
+                                // Redirecionar para /main em vez de mostrar alert
+                                window.location.href = '/main';
                             } else if (authResult === 'error') {
                                 sessionStorage.removeItem('facebook_auth_result');
                                 setErrorMessage('Erro no login com Facebook. Tente novamente.');

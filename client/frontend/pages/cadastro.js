@@ -106,9 +106,8 @@ export default function Cadastro() {
               const authResult = sessionStorage.getItem('facebook_auth_result');
               if (authResult === 'success') {
                 sessionStorage.removeItem('facebook_auth_result');
-                alert('Login com Facebook realizado com sucesso!');
-                // Redirecionar para dashboard ou página inicial
-                // window.location.href = '/dashboard';
+                // Redirecionar para /main após login social via Facebook
+                window.location.href = '/main';
               } else if (authResult === 'error') {
                 sessionStorage.removeItem('facebook_auth_result');
                 setErrorMessage('Erro no login com Facebook. Tente novamente.');
