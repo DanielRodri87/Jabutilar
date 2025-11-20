@@ -1,0 +1,27 @@
+services:
+  backend:
+    # Sobrescreve o comando para usar o uvicorn com --reload para hot-reload
+    # Usa 'python -m uvicorn' conforme a boa prática do seu Dockerfile
+    command: ["python", "-m", "uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    
+    # O volume do código já está mapeado no docker-compose.yml original, 
+    # mas garantimos que as variáveis de ambiente favoreçam o dev.
+    environment:
+      - ENVIRONMENT=development
+
+  frontend:
+    # Sobrescreve o comando de produção (npm start) para o de dev (next dev)
+    command: npm run dev
+    
+    # Mapeia os arquivos locais para dentro do container para refletir alterações em tempo real
+    volumes:
+      - ./client/frontend:/app
+      # O volume anônimo abaixo é CRÍTICO: ele impede que o diretório node_modules 
+      # do seu host (que pode não existir ou ser incompatível) apague o do container.
+      - /app/node_modules
+      # Persiste o cache do Next.js para builds mais rápidos em dev
+      - /app/.next
+    
+    environment:
+      # Garante polling para sistemas onde eventos de arquivo não funcionam bem (opcional, mas útil)
+      - WATCHPACK_POLLING=true
