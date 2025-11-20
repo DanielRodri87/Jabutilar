@@ -10,6 +10,21 @@ export default function Cadastro() {
     facebook: false
   });
 
+  // Estado para controlar a foto de perfil selecionada
+  const [profileImageIndex, setProfileImageIndex] = useState(0);
+
+  const profileImages = [
+    '/fotodeperfil.png',                    // imagem padrão (125x125 no Figma)
+    '/images/profile1.png',
+    '/images/profile2.png',
+    '/images/profile3.png',
+    '/images/profile4.png'
+  ];
+
+  const nextProfileImage = () => {
+    setProfileImageIndex((prev) => (prev + 1) % profileImages.length);
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setIsLoading(true);
@@ -38,7 +53,8 @@ export default function Cadastro() {
       senha: senha,
       nome: `${formData.get('primeiroNome')} ${formData.get('segundoNome')}`,
       username: formData.get('username'),
-      data_nascimento: dataNascimento
+      data_nascimento: dataNascimento,
+      profile_image: profileImages[profileImageIndex] // opcional: envia a foto escolhida
     };
 
     try {
@@ -55,9 +71,6 @@ export default function Cadastro() {
       if (response.ok) {
         console.log('Cadastro realizado com sucesso!', data);
         alert('Cadastro realizado com sucesso!');
-        
-        // Aqui você pode adicionar lógica de redirecionamento
-        // window.location.href = '/cadastro_grupo';
       } else {
         setErrorMessage(data.detail || 'Erro ao realizar cadastro. Tente novamente.');
       }
@@ -77,38 +90,30 @@ export default function Cadastro() {
       console.log(`Iniciando login com ${provider}`);
       
       if (provider === 'facebook' && typeof window !== 'undefined') {
-        // Use direct Facebook OAuth URL with popup
         const authUrl = getAuthUrl('facebook');
         if (authUrl) {
-          // Salvar o provider no sessionStorage para usar após o callback
           sessionStorage.setItem('oauth_provider', provider);
           
-          // Calcular posição central
           const width = 600;
           const height = 600;
           const left = (window.screen.width / 2) - (width / 2);
           const top = (window.screen.height / 2) - (height / 2);
           
-          // Abrir popup centralizado
           const popup = window.open(
             authUrl,
             'facebook-login',
             `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
           );
           
-          // Monitorar o popup para detectar quando fecha
           const checkClosed = setInterval(() => {
             if (popup.closed) {
               clearInterval(checkClosed);
               setSocialLoading(prev => ({ ...prev, [provider]: false }));
               
-              // Verificar se houve sucesso no login
               const authResult = sessionStorage.getItem('facebook_auth_result');
               if (authResult === 'success') {
                 sessionStorage.removeItem('facebook_auth_result');
                 alert('Login com Facebook realizado com sucesso!');
-                // Redirecionar para dashboard ou página inicial
-                // window.location.href = '/dashboard';
               } else if (authResult === 'error') {
                 sessionStorage.removeItem('facebook_auth_result');
                 setErrorMessage('Erro no login com Facebook. Tente novamente.');
@@ -120,7 +125,6 @@ export default function Cadastro() {
         }
       }
       
-      // Fallback to backend OAuth URL for other providers or if direct URL fails
       const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
         method: 'GET',
         headers: {
@@ -134,12 +138,9 @@ export default function Cadastro() {
 
       const data = await response.json();
       
-      // Redirecionar para a URL de autenticação do provider usando popup centralizado
       if (data.url && typeof window !== 'undefined') {
-        // Salvar o provider no sessionStorage para usar após o callback
         sessionStorage.setItem('oauth_provider', provider);
         
-        // Calcular posição central
         const width = 600;
         const height = 600;
         const left = (window.screen.width / 2) - (width / 2);
@@ -151,7 +152,6 @@ export default function Cadastro() {
           `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
         );
         
-        // Monitorar o popup para detectar quando fecha
         const checkClosed = setInterval(() => {
           if (popup.closed) {
             clearInterval(checkClosed);
@@ -191,7 +191,7 @@ export default function Cadastro() {
         }
 
         @font-face {
-          font-family: 'Airbnb Cereal';
+          font-family: 'Airbnb Cereal Md';
           src: url('../fonts/AirbnbCereal_W_Md.otf') format('opentype');
           font-weight: 500;
           font-style: normal;
@@ -227,7 +227,7 @@ export default function Cadastro() {
 
         .card {
           width: 685px;
-          height: 985px;
+          height: 1085px;
           margin: 0 auto;
           background-color: #fafafaff;
           border-radius: 35px;
@@ -829,6 +829,39 @@ export default function Cadastro() {
         .socialLinks img:hover {
           opacity: 0.7;
         }
+
+        /* NOVOS ESTILOS DO SELETOR DE PERFIL */
+        .profileSelector {
+          justify-content: center;
+          margin: center;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin: 32px 0 40px 0;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .profileImageWrapper {
+          width: 125px;
+          height: 125px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 4px solid #e5e7eb;
+          transition: border-color 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .profileImageWrapper:hover {
+          border-color: #667467;
+        }
+
+        .profileImage {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: opacity 0.5s ease-in-out;
+        }
       `}</style>
 
       <div>
@@ -843,10 +876,22 @@ export default function Cadastro() {
           </div>
         </div>
       </div>
+
       <div className="container">
         <div className="card">
           <h1 className="title">Entre e organize sua vida cáotica</h1>
-          <p className="subtitle">Preencha os campos abaixo e deixe o público te achar com o dedo</p>
+          <p className="subtitle">Preencha os campos abaixo e deixe o jabuti te ajudar com o resto</p>
+
+          {/* NOVO: Seletor de foto de perfil */}
+          <div className="profileSelector" onClick={nextProfileImage}>
+            <div className="profileImageWrapper">
+              <img
+                src={profileImages[profileImageIndex]}
+                alt="Foto de perfil selecionada"
+                className="profileImage"
+              />
+            </div>
+          </div>
 
           {errorMessage && (
             <div className="error-message">
@@ -1032,31 +1077,31 @@ export default function Cadastro() {
             <div className="dividerLine"></div>
           </div>
 
-        <div className="socialContainer">
-          <button 
-            type="button" 
-            className="socialButton facebookButton" 
-            onClick={() => handleSocialLogin('facebook')}
-            disabled={isLoading || socialLoading.facebook}
-          >
-            <img src="/facebook.png" alt="Facebook" width="24" />
-            <span>
-              {socialLoading.facebook ? 'Conectando...' : 'Continuar com Facebook'}
-            </span>
-          </button>
+          <div className="socialContainer">
+            <button 
+              type="button" 
+              className="socialButton facebookButton" 
+              onClick={() => handleSocialLogin('facebook')}
+              disabled={isLoading || socialLoading.facebook}
+            >
+              <img src="/facebook.png" alt="Facebook" width="24" />
+              <span>
+                {socialLoading.facebook ? 'Conectando...' : 'Continuar com Facebook'}
+              </span>
+            </button>
 
-          <button 
-            type="button" 
-            className="socialButton googleButton" 
-            onClick={() => handleSocialLogin('google')}
-            disabled={isLoading || socialLoading.google}
-          >
-            <img src="/google.png" alt="Google" width="24" />
-            <span>
-              {socialLoading.google ? 'Conectando...' : 'Continuar com Google'}
-            </span>
-          </button>
-        </div>
+            <button 
+              type="button" 
+              className="socialButton googleButton" 
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading || socialLoading.google}
+            >
+              <img src="/google.png" alt="Google" width="24" />
+              <span>
+                {socialLoading.google ? 'Conectando...' : 'Continuar com Google'}
+              </span>
+            </button>
+          </div>
         </div>
 
         <footer className="footer">
