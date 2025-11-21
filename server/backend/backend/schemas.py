@@ -9,6 +9,7 @@ class CadastroRequest(BaseModel):
     nome: str
     username: str
     data_nascimento: str  # formato: "YYYY-MM-DD"
+    image: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str

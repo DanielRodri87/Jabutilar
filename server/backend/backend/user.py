@@ -21,7 +21,8 @@ def cadastrar_usuario(req: CadastroRequest):
     data_response = supabase.table("user_data").insert({
         "name": req.nome,
         "username": req.username,
-        "date_birth": req.data_nascimento
+        "date_birth": req.data_nascimento,
+        "image": req.image
     }).execute()
 
     return {

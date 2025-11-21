@@ -14,7 +14,7 @@ export default function Cadastro() {
   const [profileImageIndex, setProfileImageIndex] = useState(0);
 
   const profileImages = [
-    '/fotodeperfil.png',                    // imagem padrão (125x125 no Figma)
+    '/fotodeperfil.png',                    // imagem padrão
     '/images/profile1.png',
     '/images/profile2.png',
     '/images/profile3.png',
@@ -54,7 +54,8 @@ export default function Cadastro() {
       nome: `${formData.get('primeiroNome')} ${formData.get('segundoNome')}`,
       username: formData.get('username'),
       data_nascimento: dataNascimento,
-      profile_image: profileImages[profileImageIndex] // opcional: envia a foto escolhida
+      // Envia a imagem selecionada com a chave 'image' para bater com o banco
+      image: profileImages[profileImageIndex] 
     };
 
     try {
@@ -71,6 +72,7 @@ export default function Cadastro() {
       if (response.ok) {
         console.log('Cadastro realizado com sucesso!', data);
         alert('Cadastro realizado com sucesso!');
+        // Opcional: Redirecionar o usuário aqui
       } else {
         setErrorMessage(data.detail || 'Erro ao realizar cadastro. Tente novamente.');
       }
