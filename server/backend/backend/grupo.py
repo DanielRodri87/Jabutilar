@@ -3,19 +3,35 @@ from .database import supabase
 from .schemas import GrupoBase
 from datetime import datetime
 import logging
+import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TABLE_NAME = "group_data"
 
+def gerar_codigo_convite() -> int:
+    """
+    Gera um código numérico inteiro único de 8 dígitos para o grupo.
+    Garante unicidade na tabela group_data (coluna cod_convite).
+    """
+    while True:
+        # intervalo [10_000_000, 99_999_999]
+        codigo = random.randint(10_000_000, 99_999_999)
+        existing = supabase.table(TABLE_NAME).select("id").eq("cod_convite", codigo).execute()
+        if not existing.data:
+            return codigo
+
 def criar_grupo(grupo: GrupoBase):
     """Criar um novo grupo"""
     try:
+        # gera código se não vier do request
+        cod_convite = grupo.cod_convite or gerar_codigo_convite()
+
         data = {
             "nome": grupo.nome,
             "descricao": grupo.descricao,
-            "cod_convite": grupo.cod_convite,
+            "cod_convite": cod_convite,
             "group_owner": grupo.group_owner,
             "created_at": datetime.now().isoformat(),
             "update_at": datetime.now().isoformat()
@@ -62,10 +78,16 @@ def atualizar_grupo(grupo_id: int, grupo: GrupoBase):
         if not check.data:
             raise HTTPException(status_code=404, detail=f"Grupo com ID {grupo_id} não encontrado")
         
+        cod_convite = (
+            grupo.cod_convite
+            or check.data[0].get("cod_convite")
+            or gerar_codigo_convite()
+        )
+
         data = {
             "nome": grupo.nome,
             "descricao": grupo.descricao,
-            "cod_convite": grupo.cod_convite,
+            "cod_convite": cod_convite,
             "group_owner": grupo.group_owner,
             "update_at": datetime.now().isoformat()
         }
@@ -100,4 +122,17 @@ def excluir_grupo(grupo_id: int):
         raise
     except Exception as e:
         logger.error(f"Erro ao excluir grupo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+
+def obter_grupo_por_codigo(cod_convite: int):
+    """Obter um grupo pelo código de convite"""
+    try:
+        response = supabase.table(TABLE_NAME).select("*").eq("cod_convite", cod_convite).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Grupo com esse código não encontrado")
+        return {"message": "Grupo encontrado", "data": response.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter grupo por código: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")

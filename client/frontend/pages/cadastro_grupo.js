@@ -9,6 +9,7 @@ export default function CadastroGrupo() {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // (pode remover generateCode se não quiser fallback)
   const generateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
@@ -18,15 +19,89 @@ export default function CadastroGrupo() {
     return code;
   };
 
-  const handleCadastrar = (e) => {
+  const handleCadastrar = async (e) => {
     e.preventDefault();
     if (!groupName.trim() || !groupDescription.trim()) return;
 
-    const code = generateCode();
-    setGeneratedCode(code);
-    setShowCode(false);
-    setCopied(false);
-    setShowPopup(true);
+    if (typeof window === 'undefined') return;
+    const userId =
+      sessionStorage.getItem('user_id') ||
+      localStorage.getItem('user_id') ||
+      null;
+
+    if (!userId) {
+      alert('Usuário não identificado. Faça login novamente.');
+      return;
+    }
+
+    try {
+      const createResp = await fetch('http://localhost:8000/grupo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: groupName,
+          descricao: groupDescription,
+          group_owner: userId,
+        }),
+      });
+
+      const createData = await createResp.json();
+      if (!createResp.ok) {
+        console.error('Erro ao criar grupo:', createData);
+        alert(createData.detail || 'Erro ao criar grupo.');
+        return;
+      }
+
+      const grupo = createData.data;
+      const grupoId = grupo?.id;
+      const codConvite = grupo?.cod_convite;
+
+      if (!grupoId) {
+        console.error('Resposta de criação de grupo sem ID:', createData);
+        alert('Erro ao criar grupo (ID não retornado).');
+        return;
+      }
+
+      // Atualiza id_group do usuário
+      const linkResp = await fetch(
+        `http://localhost:8000/usuario/${encodeURIComponent(
+          userId
+        )}/grupo?grupo_id=${grupoId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      const linkData = await linkResp.json();
+      if (!linkResp.ok) {
+        console.error('Erro ao vincular usuário ao grupo:', linkData);
+        alert(
+          linkData.detail ||
+            'Grupo criado, mas houve erro ao vincular o usuário ao grupo.'
+        );
+      }
+
+      // Exibe código do backend
+      setGeneratedCode(
+        typeof codConvite === 'number' ? String(codConvite) : generateCode()
+      );
+      setShowCode(false);
+      setCopied(false);
+      setShowPopup(true);
+
+      setGroupName('');
+      setGroupDescription('');
+      setConviteCode('');
+
+      // OPCIONAL: após alguns segundos redirecionar para /main
+      // setTimeout(() => {
+      //   window.location.href = `/main?uid=${encodeURIComponent(userId)}`;
+      // }, 2500);
+    } catch (err) {
+      console.error('Erro inesperado ao cadastrar grupo:', err);
+      alert('Erro inesperado ao cadastrar grupo. Tente novamente.');
+    }
   };
 
   const handleCopy = () => {
@@ -586,7 +661,10 @@ export default function CadastroGrupo() {
                 </button>
 
                 <div className="codeDisplay">
-                  {showCode ? generatedCode : '●●●●●●●●●●●●●●●●●●●●'}
+                  {/* NOVO: mostra o cod_convite real gerado pelo backend */}
+                  {showCode
+                    ? generatedCode || 'Código não disponível'
+                    : '●●●●●●●●●●●●●●●●●●●●'}
                 </div>
               </div>
 

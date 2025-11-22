@@ -9,10 +9,9 @@ from .schemas import (
     TarefasBase,
     GrupoBase,
     ContasBase,
-    SocialAuthRequest  # Descomentado e adicionada a vírgula acima
+    SocialAuthRequest
 )
-from .user import cadastrar_usuario, login_usuario
-# Importação necessária para o Social Auth
+from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario
 from .social_auth import get_oauth_url, login_social 
 
 from .item_compra import (
@@ -36,7 +35,8 @@ from .grupo import (
     criar_grupo,
     obter_grupo,
     atualizar_grupo,
-    excluir_grupo
+    excluir_grupo,
+    obter_grupo_por_codigo,
 )
 
 from .contas import (
@@ -57,7 +57,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # <-- libera qualquer frontend acessar (temporariamente)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +73,27 @@ def cadastro(req: CadastroRequest):
 def login(req: LoginRequest):
     """Realizar login de usuário"""
     return login_usuario(req)
+
+@app.get("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
+def obter_dados_usuario(id_user: str):
+    """
+    Obter dados do usuário na tabela user_data usando id_auth = id_user.
+    Usado pelo frontend para saber se o usuário já está vinculado a um grupo (id_group).
+    """
+    return obter_usuario(id_user)
+
+@app.put("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
+def atualizar_usuario(id_user: str, req: CadastroRequest):
+    """Atualizar dados do usuário"""
+    return editar_usuario(id_user, req)
+
+@app.patch("/usuario/{id_user}/grupo", response_model=dict, tags=["Autenticação"])
+def atualizar_grupo_do_usuario(id_user: str, grupo_id: int | None = Query(None, description="ID do grupo ou None para remover")):
+    """
+    Atualiza apenas o id_group do usuário na tabela user_data.
+    Envie um grupo_id válido para vincular, ou deixe como null/None para remover o vínculo.
+    """
+    return atualizar_grupo_usuario(id_user, grupo_id)
 
 # ==================== Rotas de Autenticação Social ====================
 # Rotas descomentadas e funcionais
@@ -155,7 +176,7 @@ def deletar_item(item_id: int):
 
 @app.post("/grupo", response_model=dict, tags=["Grupo"])
 def criar_novo_grupo(grupo: GrupoBase):
-    """Criar um novo grupo"""
+    """Criar um novo grupo (gera cod_convite se não for enviado)"""
     return criar_grupo(grupo)
 
 @app.get("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
@@ -163,9 +184,14 @@ def obter_dados_grupo(grupo_id: int):
     """Obter um grupo pelo ID"""
     return obter_grupo(grupo_id)
 
+@app.get("/grupo/codigo/{cod_convite}", response_model=dict, tags=["Grupo"])
+def obter_dados_grupo_por_codigo(cod_convite: int):
+    """Obter um grupo pelo código de convite (inteiro de 8 dígitos)"""
+    return obter_grupo_por_codigo(cod_convite)
+
 @app.put("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
 def atualizar_dados_grupo(grupo_id: int, grupo: GrupoBase):
-    """Atualizar um grupo existente"""
+    """Atualizar um grupo existente (mantém ou gera cod_convite)"""
     return atualizar_grupo(grupo_id, grupo)
 
 @app.delete("/grupo/{grupo_id}", response_model=dict, tags=["Grupo"])
