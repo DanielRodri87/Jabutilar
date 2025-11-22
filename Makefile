@@ -5,7 +5,7 @@ run:
 # Executa em modo desenvolvimento (combina o arquivo padrão com o arquivo .dev.yml)
 # As alterações no código (backend ou frontend) serão refletidas imediatamente
 run_dev:
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 # Sobe apenas o container do frontend
 run_front:

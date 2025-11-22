@@ -29,8 +29,8 @@ def cadastrar_usuario(req: CadastroRequest):
             "name": req.nome,
             "username": req.username,
             "date_birth": req.data_nascimento,
-            "id_auth": user_id,          # <--- CORREÇÃO CRÍTICA: Vínculo com o login
-            "image": req.profile_image   # <--- Mapeia do schema (profile_image) para a coluna do banco (image)
+            "id_auth": user_id,
+            "image": req.profile_image 
         }
 
         data_response = supabase.table("user_data").insert(dados_usuario).execute()
