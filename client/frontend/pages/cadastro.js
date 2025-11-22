@@ -54,8 +54,7 @@ export default function Cadastro() {
       nome: `${formData.get('primeiroNome')} ${formData.get('segundoNome')}`,
       username: formData.get('username'),
       data_nascimento: dataNascimento,
-      // Envia a imagem selecionada com a chave 'image' para bater com o banco
-      image: profileImages[profileImageIndex] 
+      profile_image: profileImages[profileImageIndex] 
     };
 
     try {
