@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { apiEndpoints } from '../config/api';
 import { getAuthUrl } from '../config/oauth';
 
@@ -15,35 +15,35 @@ export default function Login() {
     const DISPLAY_INTERVAL = 6000;
 
     const reviews = [
-    {
-        text: "Adorei a experiência! O site é rápido, intuitivo e me ajudou a encontrar exatamente o que eu precisava. Com certeza vou recomendar para meus amigos.",
-        author: "Leonardo, a Tartaruga Ninja",
-        stars: 5
-    },
-    {
-        text: "O serviço é muito bom e atendeu às minhas expectativas. Só acho que poderiam ter mais opções de pagamento, mas no geral foi ótimo.",
-        author: "Michelangelo, a Tartaruga Ninja",
-        stars: 4
-    },
-    {
-        text: "Excelente atendimento e suporte rápido. Resolvi tudo em poucos minutos, sem complicação. Me surpreendeu positivamente!",
-        author: "Donatello, a Tartaruga Ninja",
-        stars: 5
-    },
-    {
-        text: "Incrível! Layout moderno, atendimento atencioso e funcionamento impecável. É raro encontrar algo tão bem feito hoje em dia.",
-        author: "Rafael, a Tartaruga Ninja",
-        stars: 5
-    },
+        {
+            text: "Adorei a experiência! O site é rápido, intuitivo e me ajudou a encontrar exatamente o que eu precisava. Com certeza vou recomendar para meus amigos.",
+            author: "Leonardo, a Tartaruga Ninja",
+            stars: 5
+        },
+        {
+            text: "O serviço é muito bom e atendeu às minhas expectativas. Só acho que poderiam ter mais opções de pagamento, mas no geral foi ótimo.",
+            author: "Michelangelo, a Tartaruga Ninja",
+            stars: 4
+        },
+        {
+            text: "Excelente atendimento e suporte rápido. Resolvi tudo em poucos minutos, sem complicação. Me surpreendeu positivamente!",
+            author: "Donatello, a Tartaruga Ninja",
+            stars: 5
+        },
+        {
+            text: "Incrível! Layout moderno, atendimento atencioso e funcionamento impecável. É raro encontrar algo tão bem feito hoje em dia.",
+            author: "Rafael, a Tartaruga Ninja",
+            stars: 5
+        },
     ];
 
-    const [currentReview, setCurrentReview] = React.useState(0);
-    const [prevReview, setPrevReview] = React.useState(null);
-    const [entering, setEntering] = React.useState(false);
-    const [isAnimating, setIsAnimating] = React.useState(false);
+    const [currentReview, setCurrentReview] = useState(0);
+    const [prevReview, setPrevReview] = useState(null);
+    const [entering, setEntering] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
 
-    const currentRef = React.useRef(currentReview);
-    React.useEffect(() => { currentRef.current = currentReview; }, [currentReview]);
+    const currentRef = useRef(currentReview);
+    useEffect(() => { currentRef.current = currentReview; }, [currentReview]);
 
     function cycleReviews() {
         if (isAnimating) return;
@@ -68,12 +68,12 @@ export default function Login() {
         }, EXIT_DURATION);
     }
 
-    React.useEffect(() => {
+    useEffect(() => {
         const id = setInterval(() => cycleReviews(), DISPLAY_INTERVAL);
         return () => clearInterval(id);
     }, []);
 
-    async function handleSubmite(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
         setIsLoading(true);
         setErrorMessage('');
@@ -99,13 +99,11 @@ export default function Login() {
             if (response.ok) {
                 console.log('Login realizado com sucesso!', data);
                 
-                // Armazenar o token de acesso usando React state em vez de localStorage
-                // (localStorage não é suportado em artifacts)
+                // Aqui você pode salvar o token se o backend retornar um
+                // Ex: sessionStorage.setItem('token', data.access_token);
                 
-                alert('Login realizado com sucesso!');
-                
-                // Aqui você pode adicionar lógica de redirecionamento
-                // ou atualização de estado da aplicação
+                // Redirecionamento
+                window.location.href = '/home';
             } else {
                 setErrorMessage(data.detail || 'Erro ao realizar login. Verifique suas credenciais.');
             }
@@ -124,37 +122,31 @@ export default function Login() {
             
             console.log(`Iniciando login com ${provider}`);
             
+            // Lógica Específica para Facebook (se necessário)
             if (provider === 'facebook' && typeof window !== 'undefined') {
-                // Use direct Facebook OAuth URL with popup
                 const authUrl = getAuthUrl('facebook');
                 if (authUrl) {
-                    // Salvar o provider no sessionStorage para usar após o callback
                     sessionStorage.setItem('oauth_provider', provider);
                     
-                    // Calcular posição central
                     const width = 600;
                     const height = 600;
                     const left = (window.screen.width / 2) - (width / 2);
                     const top = (window.screen.height / 2) - (height / 2);
                     
-                    // Abrir popup centralizado
                     const popup = window.open(
                         authUrl,
                         'facebook-login',
                         `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
                     );
                     
-                    // Monitorar o popup para detectar quando fecha
                     const checkClosed = setInterval(() => {
                         if (popup.closed) {
                             clearInterval(checkClosed);
                             setSocialLoading(prev => ({ ...prev, [provider]: false }));
                             
-                            // Verificar se houve sucesso no login
                             const authResult = sessionStorage.getItem('facebook_auth_result');
                             if (authResult === 'success') {
                                 sessionStorage.removeItem('facebook_auth_result');
-                                // Redirecionar para /home em vez de mostrar alert
                                 window.location.href = '/home';
                             } else if (authResult === 'error') {
                                 sessionStorage.removeItem('facebook_auth_result');
@@ -167,7 +159,8 @@ export default function Login() {
                 }
             }
             
-            // Fallback to backend OAuth URL for other providers or if direct URL fails
+            // Lógica Genérica (Google e fallback) via Backend
+            // O backend deve ter as chaves GOCSPX configuradas
             const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
                 method: 'GET',
                 headers: {
@@ -181,12 +174,9 @@ export default function Login() {
 
             const data = await response.json();
             
-            // Redirecionar para a URL de autenticação do provider usando popup centralizado
             if (data.url && typeof window !== 'undefined') {
-                // Salvar o provider no sessionStorage para usar após o callback
                 sessionStorage.setItem('oauth_provider', provider);
                 
-                // Calcular posição central
                 const width = 600;
                 const height = 600;
                 const left = (window.screen.width / 2) - (width / 2);
@@ -198,11 +188,12 @@ export default function Login() {
                     `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
                 );
                 
-                // Monitorar o popup para detectar quando fecha
                 const checkClosed = setInterval(() => {
                     if (popup.closed) {
                         clearInterval(checkClosed);
                         setSocialLoading(prev => ({ ...prev, [provider]: false }));
+                        
+                        // Opcional: Verificar cookie ou sessionStorage aqui se o backend setar algo
                     }
                 }, 1000);
             } else {
@@ -999,7 +990,7 @@ export default function Login() {
                             </div>
                         )}
 
-                        <form className="form" onSubmit={handleSubmite}>
+                        <form className="form" onSubmit={handleSubmit}>
                             <div className="namesContainer">
                                 <div>
                                     <div className="inputWrapper">
