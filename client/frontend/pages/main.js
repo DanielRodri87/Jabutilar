@@ -159,6 +159,9 @@ export default function TelaGrupo() {
 
   // === USER ID (do login) ===
   const [userIdDebug, setUserIdDebug] = useState(null);
+  // NOVO: flag de carregamento inicial de grupo
+  const [initialLoading, setInitialLoading] = useState(true);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -174,9 +177,76 @@ export default function TelaGrupo() {
     });
     if (!finalId) {
       console.warn('[main] Nenhum user_id encontrado.');
+      setInitialLoading(false);
+      return;
     }
     setUserIdDebug(finalId);
   }, []);
+
+  // NOVO: quando tivermos o userIdDebug, buscar user_data e grupo associado (se existir)
+  useEffect(() => {
+    const carregarGrupoDoUsuario = async () => {
+      if (!userIdDebug) {
+        setInitialLoading(false);
+        return;
+      }
+      try {
+        // Buscar dados do usuário (tabela user_data) filtrando por id_auth
+        const respUser = await fetch(
+          `http://localhost:8000/usuario/${encodeURIComponent(userIdDebug)}`
+        );
+        if (!respUser.ok) {
+          console.warn('[main] Não foi possível carregar user_data pelo backend.');
+          setInitialLoading(false);
+          return;
+        }
+        const userData = await respUser.json();
+        // Esperando algo como { data: { id_group, ... } }
+        const item = userData?.data || userData; // caso a rota não esteja embrulhando em "data"
+        const grupoId = item?.id_group;
+
+        if (!grupoId) {
+          // Usuário sem grupo: mantém popup de criação
+          setShowCreateGroup(true);
+          setInitialLoading(false);
+          return;
+        }
+
+        // Carregar grupo pelo ID
+        const respGrupo = await fetch(`http://localhost:8000/grupo/${grupoId}`);
+        const grupoData = await respGrupo.json();
+        if (!respGrupo.ok || !grupoData?.data) {
+          console.warn('[main] Grupo vinculado não encontrado:', grupoData);
+          setShowCreateGroup(true);
+          setInitialLoading(false);
+          return;
+        }
+
+        const grupo = grupoData.data;
+
+        // Monta objeto local para sidebar/dashboard
+        const loadedGroup = {
+          id: grupo.id,
+          name: grupo.nome,
+          icon: '/planta.png',
+          tarefas: [],
+          compras: [],
+          contas: [...contas],
+        };
+
+        setGroups([loadedGroup]);
+        setSelectedGroup(loadedGroup);
+        setShowCreateGroup(false); // não mostrar popup, já pertence a grupo
+        setInitialLoading(false);
+      } catch (err) {
+        console.error('[main] Erro ao carregar grupo do usuário:', err);
+        setShowCreateGroup(true);
+        setInitialLoading(false);
+      }
+    };
+
+    carregarGrupoDoUsuario();
+  }, [userIdDebug]); // ...existing code...
 
   // === CRIAR GRUPO (BACKEND) ===
   const handleCreateGroup = async (e) => {
@@ -718,360 +788,369 @@ export default function TelaGrupo() {
       `}</style>
 
       <div className="container">
-        <aside className="sidebar">
-          <div className="profile">
-            <img src="/p1.png" alt="perfil" />
-            <span>Jabuti de lago</span>
-          </div>
-
-          <ul className="menu">
-            <li><FiSettings /> Configurações</li>
-            <li><FiBell /> Notificações</li>
-            <li><FiUser /> Conta</li>
-          </ul>
-
-          <div className="groups">
-            <p>Grupos</p>
-            {groups.map(g => (
-              <div
-                key={g.id}
-                className={`group-item ${selectedGroup?.id === g.id ? 'active' : ''}`}
-                onClick={() => setSelectedGroup(g)}
-                onContextMenu={(e) => openContextMenu(e, g)}
-              >
-                <img src={g.icon} alt="grupo" />
-                {editingGroupId === g.id ? (
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    onBlur={saveRename}
-                    onKeyDown={e => e.key === 'Enter' ? saveRename() : e.key === 'Escape' ? setEditingGroupId(null) : null}
-                    autoFocus
-                    style={{ fontSize: '15px', fontWeight: 500, border: '1px solid #667467', borderRadius: 4, padding: '2px 4px', width: '100%' }}
-                  />
-                ) : (
-                  <span>{g.name}</span>
-                )}
-              </div>
-            ))}
-            <div className="add-group" onClick={() => setShowCreateGroup(true)}>
-              <FiPlus style={{ fontSize: '18px' }} />
-            </div>
-          </div>
-        </aside>
-
-        {selectedGroup ? (
-          <main className="main" ref={mainRef}>
-            <div className="fixed-header">
-              <div className="header-content">
-                <img src={selectedGroup.icon} alt="grupo" style={{ width: 28, height: 28 }} />
-                <span style={{ fontSize: '18px', fontWeight: 700 }}>{selectedGroup.name}</span>
-              </div>
-              <div className="header-actions">
-                <img src="/editar.png" alt="editar" />
-                <img src="/favoritar.png" alt="favoritar" />
-                <span className="share-text">Share</span>
-              </div>
-            </div>
-
-            <div className="content">
-              <div className="title-section">
-                <div className="title-left">
-                  <img src={selectedGroup.icon} alt="grupo" className="plant-large" />
-                  <h1 className="group-name">{selectedGroup.name}</h1>
-                  <div className="members-line">
-                    <div className="profile-stack">
-                      <img src="/p1.png" alt="p1" className="profile-img" />
-                      <img src="/p2.png" alt="p2" className="profile-img" />
-                      <img src="/p3.png" alt="p3" className="profile-img" />
-                      <img src="/p4.png" alt="p4" className="profile-img" />
-                    </div>
-                    <span>4 pessoas estão nesse grupo</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* TAREFAS */}
-              <section className="dashboard">
-                <h3>Tarefas</h3>
-                <div style={{ overflow: 'hidden', borderRadius: 12 }}>
-                  <table className="table-container">
-                    <colgroup>
-                      {columnWidths.tarefas.map((w, i) => <col key={i} style={{ width: w, maxWidth: w }} />)}
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        {['Check', 'Descrição', 'Status', 'Prioridade', 'Data', 'Responsável'].map((label, i) => (
-                          <th key={i}>
-                            <div className="th-label">
-                              {i === 0 && <FiCheck />}
-                              {i === 1 && <FiAlignLeft />}
-                              {i === 2 && <FiCheckSquare />}
-                              {i === 3 && <FiAlertCircle />}
-                              {i === 4 && <FiCalendar />}
-                              {i === 5 && <FiUser />}
-                              <span>{label}</span>
-                            </div>
-                            {i < 5 && (
-                              <div
-                                className="resize-handle"
-                                onPointerDown={(e) => startResize(e, 'tarefas', i)}
-                              />
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tarefas.map(t => (
-                        <tr
-                          key={t.id}
-                          className={removingTaskId === t.id ? 'removing' : ''}
-                          style={{
-                            transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
-                            height: removingTaskId === t.id ? 0 : 'auto'
-                          }}
-                        >
-                          <td>
-                            <div
-                              className={`check-circle ${t.checked ? 'checked' : ''}`}
-                              onClick={() => !t.checked && handleTaskCheck(t.id)}
-                            />
-                          </td>
-                          <td>
-                            {t.editing || editingTask === t.id ? (
-                              <input
-                                type="text"
-                                className="edit-input"
-                                value={t.descricao}
-                                onChange={e => setTarefas(prev => prev.map(task => task.id === t.id ? { ...task, descricao: e.target.value } : task))}
-                                onBlur={() => saveTask(t.id)}
-                                onKeyDown={e => e.key === 'Enter' && saveTask(t.id)}
-                                autoFocus
-                              />
-                            ) : (
-                              <span onClick={() => setEditingTask(t.id)}>{t.descricao || 'Clique para editar'}</span>
-                            )}
-                          </td>
-                          <td>
-                            <div
-                              className={`tag-display ${!t.status ? 'empty' : ''}`}
-                              style={{
-                                backgroundColor: !t.status ? '#f3f4f6' : 
-                                  t.status === 'Concluída' ? '#d5f5e3' : 
-                                  t.status === 'Em andamento' ? '#fef3c7' : '#e5e7eb',
-                                color: !t.status ? '#9ca3af' : 
-                                  t.status === 'Concluída' ? '#2e7d32' : 
-                                  t.status === 'Em andamento' ? '#d97706' : '#4b5563'
-                              }}
-                              onClick={() => cycleStatus(t.id)}
-                            >
-                              {t.status || 'Selecionar'} <FiChevronDown />
-                            </div>
-                          </td>
-                          <td>
-                            <div
-                              className="tag-display"
-                              style={{
-                                backgroundColor: t.prioridade === 'Alta' ? '#fee2e2' : t.prioridade === 'Média' ? '#f3e8ff' : '#dbeafe',
-                                color: t.prioridade === 'Alta' ? '#dc2626' : t.prioridade === 'Média' ? '#9333ea' : '#2563eb'
-                              }}
-                              onClick={() => cyclePrioridade(t.id, true)}
-                            >
-                              {t.prioridade} <FiChevronDown />
-                            </div>
-                          </td>
-                          <td>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowDatePicker(showDatePicker === t.id ? null : t.id);
-                              }}
-                              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                            >
-                              <FiCalendar />
-                              {t.data || 'Selecionar'}
-                            </div>
-                            {showDatePicker === t.id && renderDatePicker(t.id, t.data)}
-                          </td>
-                          <td>
-                            <img src={t.responsavel} alt="resp" className="resp" />
-                            {t.editing && (
-                              <FiTrash2 style={{ marginLeft: 8, cursor: 'pointer', color: '#dc2626' }} onClick={() => deleteTask(t.id)} />
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
-              </section>
-
-              {/* CONTAS */}
-              <section className="dashboard">
-                <h3>Contas</h3>
-                <div className="total-container">
-                  <div className="total-value">R$ {formatCurrency(totalContas)}</div>
-                  <div className="total-label">Montante total do mês</div>
-                </div>
-
-                <div className="bar-container">
-                  <div className="bar">
-                    {contas.map(c => c.valor > 0 && (
-                      <div
-                        key={c.id}
-                        className="bar-segment"
-                        style={{
-                          backgroundColor: c.cor,
-                          flex: `${c.valor} 1 0`,
-                          minWidth: totalContas > 0 ? '10px' : '0'
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <ul className="lista-contas">
-                  {contas.map(c => (
-                    <li key={c.id} className="conta-item">
-                      <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
-                      <input
-                        type="text"
-                        className="conta-input"
-                        value={c.nome}
-                        onChange={e => updateConta(c.id, 'nome', e.target.value)}
-                        placeholder="Sem categoria"
-                      />
-                      <input
-                        type="text"
-                        className="conta-input valor-input"
-                        value={c.valor > 0 ? formatCurrency(c.valor) : ''}
-                        onChange={e => updateConta(c.id, 'valor', e.target.value)}
-                        placeholder="R$ 0,00"
-                        style={{ width: 90 }}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              {/* LISTA DE COMPRAS */}
-              <section className="dashboard">
-                <h3>Lista de compras</h3>
-                <div style={{ overflow: 'hidden', borderRadius: 12 }}>
-                  <table className="table-container">
-                    <colgroup>
-                      {columnWidths.compras.map((w, i) => <col key={i} style={{ width: w, maxWidth: w }} />)}
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        {['Comprado?', 'Produto', 'Tipo', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
-                          <th key={i}>
-                            <div className="th-label">
-                              {i === 0 && <FiCheck />}
-                              {i === 1 && <FiAlignLeft />}
-                              {i === 2 && <FiTag />}
-                              {i === 3 && <FiDollarSign />}
-                              {i === 4 && <FiAlertCircle />}
-                              {i === 5 && <FiUser />}
-                              <span>{label}</span>
-                            </div>
-                            {i < 5 && (
-                              <div
-                                className="resize-handle"
-                                onPointerDown={(e) => startResize(e, 'compras', i)}
-                              />
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {compras.map(c => (
-                        <tr
-                          key={c.id}
-                          className={removingCompraId === c.id ? 'removing' : ''}
-                          style={{
-                            transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
-                            height: removingCompraId === c.id ? 0 : 'auto'
-                          }}
-                        >
-                          <td>
-                            <div
-                              className={`check-circle ${c.checked ? 'checked' : ''}`}
-                              onClick={() => !c.checked && handleCompraCheck(c.id)}
-                            />
-                          </td>
-                          <td>
-                            {c.editing || editingCompra === c.id ? (
-                              <input
-                                type="text"
-                                className="edit-input"
-                                value={c.produto}
-                                onChange={e => setCompras(prev => prev.map(compra => compra.id === c.id ? { ...compra, produto: e.target.value } : compra))}
-                                onBlur={() => saveCompra(c.id)}
-                                onKeyDown={e => e.key === 'Enter' && saveCompra(c.id)}
-                                autoFocus
-                              />
-                            ) : (
-                              <span onClick={() => setEditingCompra(c.id)}>{c.produto || 'Clique para editar'}</span>
-                            )}
-                          </td>
-                          <td>
-                            <div
-                              className="tag-display"
-                              style={{
-                                backgroundColor: c.tipo === 'Limpeza' ? '#f9a8d4' : c.tipo === 'Comida' ? '#fecaca' : '#fee2e2',
-                                color: c.tipo === 'Limpeza' ? '#be185d' : c.tipo === 'Comida' ? '#991b1b' : '#ea580c'
-                              }}
-                              onClick={() => cycleTipo(c.id)}
-                            >
-                              {c.tipo} <FiChevronDown />
-                            </div>
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="edit-input"
-                              value={c.valor ? formatCurrency(parseFloat(c.valor)) : ''}
-                              onChange={e => updateCompraValor(c.id, e.target.value)}
-                              placeholder="R$ 0,00"
-                              style={{ width: 70, textAlign: 'right', fontFamily: 'monospace' }}
-                            />
-                          </td>
-                          <td>
-                            <div
-                              className="tag-display"
-                              style={{
-                                backgroundColor: c.prioridade === 'Alta' ? '#fee2e2' : c.prioridade === 'Média' ? '#f3e8ff' : '#dbeafe',
-                                color: c.prioridade === 'Alta' ? '#dc2626' : c.prioridade === 'Média' ? '#9333ea' : '#2563eb'
-                              }}
-                              onClick={() => cyclePrioridade(c.id, false)}
-                            >
-                              {c.prioridade} <FiChevronDown />
-                            </div>
-                          </td>
-                          <td>
-                            <img src={c.responsavel} alt="resp" className="resp" />
-                            {c.editing && (
-                              <FiTrash2 style={{ marginLeft: 8, cursor: 'pointer', color: '#dc2626' }} onClick={() => deleteCompra(c.id)} />
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="add-row" onClick={addCompra}><FiPlus style={{ fontSize: '18px' }} /></div>
-              </section>
-            </div>
+        {/* Se ainda estiver carregando o grupo inicial, mostra só uma mensagem simples */}
+        {initialLoading ? (
+          <main className="main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+            <p>Carregando seu grupo...</p>
           </main>
         ) : (
-          <main className="main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-            <p>Clique em + para criar ou entrar em um grupo</p>
-          </main>
+          <>
+            <aside className="sidebar">
+              <div className="profile">
+                <img src="/p1.png" alt="perfil" />
+                <span>Jabuti de lago</span>
+              </div>
+
+              <ul className="menu">
+                <li><FiSettings /> Configurações</li>
+                <li><FiBell /> Notificações</li>
+                <li><FiUser /> Conta</li>
+              </ul>
+
+              <div className="groups">
+                <p>Grupos</p>
+                {groups.map(g => (
+                  <div
+                    key={g.id}
+                    className={`group-item ${selectedGroup?.id === g.id ? 'active' : ''}`}
+                    onClick={() => setSelectedGroup(g)}
+                    onContextMenu={(e) => openContextMenu(e, g)}
+                  >
+                    <img src={g.icon} alt="grupo" />
+                    {editingGroupId === g.id ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onBlur={saveRename}
+                        onKeyDown={e => e.key === 'Enter' ? saveRename() : e.key === 'Escape' ? setEditingGroupId(null) : null}
+                        autoFocus
+                        style={{ fontSize: '15px', fontWeight: 500, border: '1px solid #667467', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                      />
+                    ) : (
+                      <span>{g.name}</span>
+                    )}
+                  </div>
+                ))}
+                <div className="add-group" onClick={() => setShowCreateGroup(true)}>
+                  <FiPlus style={{ fontSize: '18px' }} />
+                </div>
+              </div>
+            </aside>
+
+            {selectedGroup ? (
+              <main className="main" ref={mainRef}>
+                <div className="fixed-header">
+                  <div className="header-content">
+                    <img src={selectedGroup.icon} alt="grupo" style={{ width: 28, height: 28 }} />
+                    <span style={{ fontSize: '18px', fontWeight: 700 }}>{selectedGroup.name}</span>
+                  </div>
+                  <div className="header-actions">
+                    <img src="/editar.png" alt="editar" />
+                    <img src="/favoritar.png" alt="favoritar" />
+                    <span className="share-text">Share</span>
+                  </div>
+                </div>
+
+                <div className="content">
+                  <div className="title-section">
+                    <div className="title-left">
+                      <img src={selectedGroup.icon} alt="grupo" className="plant-large" />
+                      <h1 className="group-name">{selectedGroup.name}</h1>
+                      <div className="members-line">
+                        <div className="profile-stack">
+                          <img src="/p1.png" alt="p1" className="profile-img" />
+                          <img src="/p2.png" alt="p2" className="profile-img" />
+                          <img src="/p3.png" alt="p3" className="profile-img" />
+                          <img src="/p4.png" alt="p4" className="profile-img" />
+                        </div>
+                        <span>4 pessoas estão nesse grupo</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TAREFAS */}
+                  <section className="dashboard">
+                    <h3>Tarefas</h3>
+                    <div style={{ overflow: 'hidden', borderRadius: 12 }}>
+                      <table className="table-container">
+                        <colgroup>
+                          {columnWidths.tarefas.map((w, i) => <col key={i} style={{ width: w, maxWidth: w }} />)}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            {['Check', 'Descrição', 'Status', 'Prioridade', 'Data', 'Responsável'].map((label, i) => (
+                              <th key={i}>
+                                <div className="th-label">
+                                  {i === 0 && <FiCheck />}
+                                  {i === 1 && <FiAlignLeft />}
+                                  {i === 2 && <FiCheckSquare />}
+                                  {i === 3 && <FiAlertCircle />}
+                                  {i === 4 && <FiCalendar />}
+                                  {i === 5 && <FiUser />}
+                                  <span>{label}</span>
+                                </div>
+                                {i < 5 && (
+                                  <div
+                                    className="resize-handle"
+                                    onPointerDown={(e) => startResize(e, 'tarefas', i)}
+                                  />
+                                )}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tarefas.map(t => (
+                            <tr
+                              key={t.id}
+                              className={removingTaskId === t.id ? 'removing' : ''}
+                              style={{
+                                transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+                                height: removingTaskId === t.id ? 0 : 'auto'
+                              }}
+                            >
+                              <td>
+                                <div
+                                  className={`check-circle ${t.checked ? 'checked' : ''}`}
+                                  onClick={() => !t.checked && handleTaskCheck(t.id)}
+                                />
+                              </td>
+                              <td>
+                                {t.editing || editingTask === t.id ? (
+                                  <input
+                                    type="text"
+                                    className="edit-input"
+                                    value={t.descricao}
+                                    onChange={e => setTarefas(prev => prev.map(task => task.id === t.id ? { ...task, descricao: e.target.value } : task))}
+                                    onBlur={() => saveTask(t.id)}
+                                    onKeyDown={e => e.key === 'Enter' && saveTask(t.id)}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span onClick={() => setEditingTask(t.id)}>{t.descricao || 'Clique para editar'}</span>
+                                )}
+                              </td>
+                              <td>
+                                <div
+                                  className={`tag-display ${!t.status ? 'empty' : ''}`}
+                                  style={{
+                                    backgroundColor: !t.status ? '#f3f4f6' : 
+                                      t.status === 'Concluída' ? '#d5f5e3' : 
+                                      t.status === 'Em andamento' ? '#fef3c7' : '#e5e7eb',
+                                    color: !t.status ? '#9ca3af' : 
+                                      t.status === 'Concluída' ? '#2e7d32' : 
+                                      t.status === 'Em andamento' ? '#d97706' : '#4b5563'
+                                  }}
+                                  onClick={() => cycleStatus(t.id)}
+                                >
+                                  {t.status || 'Selecionar'} <FiChevronDown />
+                                </div>
+                              </td>
+                              <td>
+                                <div
+                                  className="tag-display"
+                                  style={{
+                                    backgroundColor: t.prioridade === 'Alta' ? '#fee2e2' : t.prioridade === 'Média' ? '#f3e8ff' : '#dbeafe',
+                                    color: t.prioridade === 'Alta' ? '#dc2626' : t.prioridade === 'Média' ? '#9333ea' : '#2563eb'
+                                  }}
+                                  onClick={() => cyclePrioridade(t.id, true)}
+                                >
+                                  {t.prioridade} <FiChevronDown />
+                                </div>
+                              </td>
+                              <td>
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowDatePicker(showDatePicker === t.id ? null : t.id);
+                                  }}
+                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                >
+                                  <FiCalendar />
+                                  {t.data || 'Selecionar'}
+                                </div>
+                                {showDatePicker === t.id && renderDatePicker(t.id, t.data)}
+                              </td>
+                              <td>
+                                <img src={t.responsavel} alt="resp" className="resp" />
+                                {t.editing && (
+                                  <FiTrash2 style={{ marginLeft: 8, cursor: 'pointer', color: '#dc2626' }} onClick={() => deleteTask(t.id)} />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
+                  </section>
+
+                  {/* CONTAS */}
+                  <section className="dashboard">
+                    <h3>Contas</h3>
+                    <div className="total-container">
+                      <div className="total-value">R$ {formatCurrency(totalContas)}</div>
+                      <div className="total-label">Montante total do mês</div>
+                    </div>
+
+                    <div className="bar-container">
+                      <div className="bar">
+                        {contas.map(c => c.valor > 0 && (
+                          <div
+                            key={c.id}
+                            className="bar-segment"
+                            style={{
+                              backgroundColor: c.cor,
+                              flex: `${c.valor} 1 0`,
+                              minWidth: totalContas > 0 ? '10px' : '0'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="lista-contas">
+                      {contas.map(c => (
+                        <li key={c.id} className="conta-item">
+                          <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
+                          <input
+                            type="text"
+                            className="conta-input"
+                            value={c.nome}
+                            onChange={e => updateConta(c.id, 'nome', e.target.value)}
+                            placeholder="Sem categoria"
+                          />
+                          <input
+                            type="text"
+                            className="conta-input valor-input"
+                            value={c.valor > 0 ? formatCurrency(c.valor) : ''}
+                            onChange={e => updateConta(c.id, 'valor', e.target.value)}
+                            placeholder="R$ 0,00"
+                            style={{ width: 90 }}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+
+                  {/* LISTA DE COMPRAS */}
+                  <section className="dashboard">
+                    <h3>Lista de compras</h3>
+                    <div style={{ overflow: 'hidden', borderRadius: 12 }}>
+                      <table className="table-container">
+                        <colgroup>
+                          {columnWidths.compras.map((w, i) => <col key={i} style={{ width: w, maxWidth: w }} />)}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            {['Comprado?', 'Produto', 'Tipo', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
+                              <th key={i}>
+                                <div className="th-label">
+                                  {i === 0 && <FiCheck />}
+                                  {i === 1 && <FiAlignLeft />}
+                                  {i === 2 && <FiTag />}
+                                  {i === 3 && <FiDollarSign />}
+                                  {i === 4 && <FiAlertCircle />}
+                                  {i === 5 && <FiUser />}
+                                  <span>{label}</span>
+                                </div>
+                                {i < 5 && (
+                                  <div
+                                    className="resize-handle"
+                                    onPointerDown={(e) => startResize(e, 'compras', i)}
+                                  />
+                                )}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {compras.map(c => (
+                            <tr
+                              key={c.id}
+                              className={removingCompraId === c.id ? 'removing' : ''}
+                              style={{
+                                transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+                                height: removingCompraId === c.id ? 0 : 'auto'
+                              }}
+                            >
+                              <td>
+                                <div
+                                  className={`check-circle ${c.checked ? 'checked' : ''}`}
+                                  onClick={() => !c.checked && handleCompraCheck(c.id)}
+                                />
+                              </td>
+                              <td>
+                                {c.editing || editingCompra === c.id ? (
+                                  <input
+                                    type="text"
+                                    className="edit-input"
+                                    value={c.produto}
+                                    onChange={e => setCompras(prev => prev.map(compra => compra.id === c.id ? { ...compra, produto: e.target.value } : compra))}
+                                    onBlur={() => saveCompra(c.id)}
+                                    onKeyDown={e => e.key === 'Enter' && saveCompra(c.id)}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span onClick={() => setEditingCompra(c.id)}>{c.produto || 'Clique para editar'}</span>
+                                )}
+                              </td>
+                              <td>
+                                <div
+                                  className="tag-display"
+                                  style={{
+                                    backgroundColor: c.tipo === 'Limpeza' ? '#f9a8d4' : c.tipo === 'Comida' ? '#fecaca' : '#fee2e2',
+                                    color: c.tipo === 'Limpeza' ? '#be185d' : c.tipo === 'Comida' ? '#991b1b' : '#ea580c'
+                                  }}
+                                  onClick={() => cycleTipo(c.id)}
+                                >
+                                  {c.tipo} <FiChevronDown />
+                                </div>
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="edit-input"
+                                  value={c.valor ? formatCurrency(parseFloat(c.valor)) : ''}
+                                  onChange={e => updateCompraValor(c.id, e.target.value)}
+                                  placeholder="R$ 0,00"
+                                  style={{ width: 70, textAlign: 'right', fontFamily: 'monospace' }}
+                                />
+                              </td>
+                              <td>
+                                <div
+                                  className="tag-display"
+                                  style={{
+                                    backgroundColor: c.prioridade === 'Alta' ? '#fee2e2' : c.prioridade === 'Média' ? '#f3e8ff' : '#dbeafe',
+                                    color: c.prioridade === 'Alta' ? '#dc2626' : c.prioridade === 'Média' ? '#9333ea' : '#2563eb'
+                                  }}
+                                  onClick={() => cyclePrioridade(c.id, false)}
+                                >
+                                  {c.prioridade} <FiChevronDown />
+                                </div>
+                              </td>
+                              <td>
+                                <img src={c.responsavel} alt="resp" className="resp" />
+                                {c.editing && (
+                                  <FiTrash2 style={{ marginLeft: 8, cursor: 'pointer', color: '#dc2626' }} onClick={() => deleteCompra(c.id)} />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="add-row" onClick={addCompra}><FiPlus style={{ fontSize: '18px' }} /></div>
+                  </section>
+                </div>
+              </main>
+            ) : (
+              <main className="main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                <p>Clique em + para criar ou entrar em um grupo</p>
+              </main>
+            )}
+          </>
         )}
       </div>
 
@@ -1088,7 +1167,7 @@ export default function TelaGrupo() {
       )}
 
       {/* POPUP: CRIAR/ENTRAR */}
-      {showCreateGroup && (
+      {showCreateGroup && !initialLoading && (
         <div className="overlay" onClick={closePopups}>
           <div className="popup-card" onClick={e => e.stopPropagation()}>
             <h1 className="popup-title">Você ainda não está associado a nenhum grupo doméstico</h1>

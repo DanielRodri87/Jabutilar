@@ -180,3 +180,29 @@ def atualizar_grupo_usuario(id_user: str, grupo_id: int | None):
     except Exception as e:
         logger.error(f"Erro ao atualizar grupo do usuário: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+def obter_usuario(id_user: str):
+    """
+    Busca os dados do usuário na tabela user_data usando id_auth = id_user.
+    Retorna um único registro (ou 404 se não encontrar).
+    """
+    try:
+        logger.info(f"Buscando user_data para ID_AUTH={id_user}")
+        resp = (
+            supabase
+            .table("user_data")
+            .select("*")
+            .eq("id_auth", id_user)
+            .single()
+            .execute()
+        )
+
+        if not resp.data:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        return {"data": resp.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter usuário: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

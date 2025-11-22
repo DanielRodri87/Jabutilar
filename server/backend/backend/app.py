@@ -11,7 +11,7 @@ from .schemas import (
     ContasBase,
     SocialAuthRequest
 )
-from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario
+from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario
 from .social_auth import get_oauth_url, login_social 
 
 from .item_compra import (
@@ -73,6 +73,14 @@ def cadastro(req: CadastroRequest):
 def login(req: LoginRequest):
     """Realizar login de usuário"""
     return login_usuario(req)
+
+@app.get("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
+def obter_dados_usuario(id_user: str):
+    """
+    Obter dados do usuário na tabela user_data usando id_auth = id_user.
+    Usado pelo frontend para saber se o usuário já está vinculado a um grupo (id_group).
+    """
+    return obter_usuario(id_user)
 
 @app.put("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
 def atualizar_usuario(id_user: str, req: CadastroRequest):
