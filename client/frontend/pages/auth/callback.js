@@ -65,8 +65,9 @@ export default function AuthCallback() {
         // 4. Redirecionamento forçado
         // Usamos window.location.href como fallback se o router falhar
         setTimeout(() => {
-          router.push('/home').catch(() => {
-            window.location.href = '/home';
+          // ALTERADO AQUI: Redireciona para /main em vez de /home
+          router.push('/main').catch(() => {
+            window.location.href = '/main';
           });
         }, 1500);
         
