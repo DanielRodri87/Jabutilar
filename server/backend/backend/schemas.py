@@ -9,6 +9,7 @@ class CadastroRequest(BaseModel):
     nome: str
     username: str
     data_nascimento: str  # formato: "YYYY-MM-DD"
+    profile_image: Optional[str] = "client/frontend/public/fotodeperfil.png"
 
 class LoginRequest(BaseModel):
     email: str
