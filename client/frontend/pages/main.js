@@ -157,10 +157,13 @@ export default function TelaGrupo() {
     return code;
   };
 
-  // === USER ID (do login) ===
+  // === DADOS DO USUÁRIO (NOME / FOTO) ===
   const [userIdDebug, setUserIdDebug] = useState(null);
-  // NOVO: flag de carregamento inicial de grupo
   const [initialLoading, setInitialLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState({
+    name: 'Jabuti de lago',
+    image: '/p1.png',
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -181,6 +184,30 @@ export default function TelaGrupo() {
       return;
     }
     setUserIdDebug(finalId);
+
+    // NOVO: tenta carregar extra_data do storage para montar o perfil
+    try {
+      const rawExtra =
+        sessionStorage.getItem('user_extra') ||
+        localStorage.getItem('user_extra');
+      if (rawExtra) {
+        const extra = JSON.parse(rawExtra);
+        // ajuste estes campos conforme as colunas da tabela user_data
+        const name = extra?.name || extra?.username || 'Jabuti de lago';
+        let image = extra?.image || '/p1.png';
+
+        // se no banco você salva caminho relativo ("client/frontend/public/..."),
+        // converte para o path público consumido pelo Next ("/fotodeperfil.png", por ex.)
+        if (typeof image === 'string' && image.includes('public/')) {
+          const idx = image.indexOf('public/');
+          image = '/' + image.substring(idx + 'public/'.length);
+        }
+
+        setUserProfile({ name, image });
+      }
+    } catch (e) {
+      console.warn('[main] Não foi possível ler user_extra do storage:', e);
+    }
   }, []);
 
   // NOVO: quando tivermos o userIdDebug, buscar user_data e grupo associado (se existir)
@@ -191,7 +218,6 @@ export default function TelaGrupo() {
         return;
       }
       try {
-        // Buscar dados do usuário (tabela user_data) filtrando por id_auth
         const respUser = await fetch(
           `http://localhost:8000/usuario/${encodeURIComponent(userIdDebug)}`
         );
@@ -201,9 +227,21 @@ export default function TelaGrupo() {
           return;
         }
         const userData = await respUser.json();
-        // Esperando algo como { data: { id_group, ... } }
-        const item = userData?.data || userData; // caso a rota não esteja embrulhando em "data"
+        const item = userData?.data || userData;
         const grupoId = item?.id_group;
+
+        // NOVO: atualiza perfil com dados mais recentes do backend
+        try {
+          const name = item?.name || item?.username || userProfile.name;
+          let image = item?.image || userProfile.image;
+          if (typeof image === 'string' && image.includes('public/')) {
+            const idx = image.indexOf('public/');
+            image = '/' + image.substring(idx + 'public/'.length);
+          }
+          setUserProfile({ name, image });
+        } catch (e) {
+          console.warn('[main] Falha ao atualizar perfil a partir de user_data:', e);
+        }
 
         if (!grupoId) {
           // Usuário sem grupo: mantém popup de criação
@@ -246,7 +284,8 @@ export default function TelaGrupo() {
     };
 
     carregarGrupoDoUsuario();
-  }, [userIdDebug]); // ...existing code...
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userIdDebug]);
 
   // === CRIAR GRUPO (BACKEND) ===
   const handleCreateGroup = async (e) => {
@@ -797,8 +836,9 @@ export default function TelaGrupo() {
           <>
             <aside className="sidebar">
               <div className="profile">
-                <img src="/p1.png" alt="perfil" />
-                <span>Jabuti de lago</span>
+                {/* USAR FOTO/NOME DINÂMICOS */}
+                <img src={userProfile.image} alt="perfil" />
+                <span>{userProfile.name}</span>
               </div>
 
               <ul className="menu">

@@ -101,6 +101,7 @@ export default function Login() {
 
                 // --- NOVO: usar formato padronizado do backend ---
                 const userId = data?.user_id || data?.user?.id;
+                const extraData = data?.extra_data || null; // NOVO
                 // --- FIM NOVO ---
 
                 if (userId) {
@@ -109,6 +110,18 @@ export default function Login() {
                 } else {
                     console.warn('ID de usuário não encontrado na resposta de login.');
                 }
+
+                // NOVO: guarda dados do user_data para usar na main.js
+                if (extraData) {
+                    try {
+                        const serialized = JSON.stringify(extraData);
+                        sessionStorage.setItem('user_extra', serialized);
+                        localStorage.setItem('user_extra', serialized);
+                    } catch (e) {
+                        console.warn('Não foi possível serializar extra_data:', e);
+                    }
+                }
+
                 window.location.href = `/main${userId ? `?uid=${encodeURIComponent(userId)}` : ''}`;
             } else {
                 setErrorMessage(data.detail || 'Erro ao realizar login. Verifique suas credenciais.');
