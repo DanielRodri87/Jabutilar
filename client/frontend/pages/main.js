@@ -12,6 +12,8 @@ export default function TelaGrupo() {
 
   const [tarefas, setTarefas] = useState([]);
   const [compras, setCompras] = useState([]);
+  // NOVO: lista de contas detalhadas (do backend, baseada em ContasBase)
+  const [contasDetalhadas, setContasDetalhadas] = useState([]);
   const [contas, setContas] = useState([
     { id: 1, nome: 'Sem categoria', valor: 0, cor: '#91B6E4' },
     { id: 2, nome: 'Sem categoria', valor: 0, cor: '#E4A87B' },
@@ -27,7 +29,9 @@ export default function TelaGrupo() {
   // === REDIMENSIONAMENTO SUAVE E CONFINADO ===
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
-    compras: [50, 220, 110, 100, 110, 70]
+    compras: [50, 220, 110, 100, 110, 70],
+    // NOVO: colunas da lista de contas (Pago?, Descrição, Categoria, Valor, Vencimento, Recorrente?, Responsável)
+    contas:  [50, 220, 130, 100, 120, 120, 70],
   });
   const isResizing = useRef(null);
   const startX = useRef(0);
@@ -81,6 +85,8 @@ export default function TelaGrupo() {
   // === REMOÇÃO COM ANIMAÇÃO SUAVE ===
   const [removingTaskId, setRemovingTaskId] = useState(null);
   const [removingCompraId, setRemovingCompraId] = useState(null);
+  // NOVO: remoção suave de contas detalhadas
+  const [removingContaId, setRemovingContaId] = useState(null);
 
   const handleTaskCheck = (taskId) => {
     setRemovingTaskId(taskId);
@@ -95,6 +101,15 @@ export default function TelaGrupo() {
     setTimeout(() => {
       setCompras(prev => prev.filter(c => c.id !== compraId));
       setRemovingCompraId(null);
+    }, 280);
+  };
+
+  // NOVO: marcar conta como paga (remoção suave da linha localmente)
+  const handleContaCheck = (contaId) => {
+    setRemovingContaId(contaId);
+    setTimeout(() => {
+      setContasDetalhadas(prev => prev.filter(c => c.id !== contaId));
+      setRemovingContaId(null);
     }, 280);
   };
 
@@ -144,6 +159,8 @@ export default function TelaGrupo() {
       setTarefas(selectedGroup.tarefas || []);
       setCompras(selectedGroup.compras || []);
       setContas(selectedGroup.contas || []);
+      // NOVO: ao trocar de grupo, buscar contas detalhadas no backend
+      carregarContasDoGrupo(selectedGroup.id);
     }
   }, [selectedGroup]);
 
@@ -210,7 +227,27 @@ export default function TelaGrupo() {
     }
   }, []);
 
-  // NOVO: quando tivermos o userIdDebug, buscar user_data e grupo associado (se existir)
+  // NOVO: função para buscar contas do grupo no backend
+  const carregarContasDoGrupo = async (grupoId) => {
+    if (!grupoId) return;
+    try {
+      const resp = await fetch(`http://localhost:8000/conta/${grupoId}`);
+      const data = await resp.json();
+      if (!resp.ok) {
+        console.warn('[main] Erro ao carregar contas do grupo:', data);
+        setContasDetalhadas([]);
+        return;
+      }
+      // backend retorna algo como { message, data: [...] }
+      const lista = Array.isArray(data.data) ? data.data : [];
+      setContasDetalhadas(lista);
+    } catch (err) {
+      console.error('[main] Erro inesperado ao carregar contas do grupo:', err);
+      setContasDetalhadas([]);
+    }
+  };
+
+  // NOVO: quando tivermos o userIdDebug, buscar user_data e grupo associado
   useEffect(() => {
     const carregarGrupoDoUsuario = async () => {
       if (!userIdDebug) {
@@ -1026,7 +1063,7 @@ export default function TelaGrupo() {
                     <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
                   </section>
 
-                  {/* CONTAS */}
+                  {/* CONTAS (card atual de barras + inputs resumidos) */}
                   <section className="dashboard">
                     <h3>Contas</h3>
                     <div className="total-container">
@@ -1072,6 +1109,167 @@ export default function TelaGrupo() {
                         </li>
                       ))}
                     </ul>
+                  </section>
+
+                  {/* NOVO: LISTA DE CONTAS (DETALHADA, BASEADA EM ContasBase) */}
+                  <section className="dashboard">
+                    <h3>Lista de contas</h3>
+                    <div style={{ overflow: 'hidden', borderRadius: 12 }}>
+                      <table className="table-container">
+                        <colgroup>
+                          {columnWidths.contas.map((w, i) => (
+                            <col key={i} style={{ width: w, maxWidth: w }} />
+                          ))}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            {[
+                              'Pago?',
+                              'Descrição',
+                              'Categoria',
+                              'Valor',
+                              'Vencimento',
+                              'Recorrente?',
+                              'Responsável',
+                            ].map((label, i) => (
+                              <th key={i}>
+                                <div className="th-label">
+                                  {i === 0 && <FiCheck />}
+                                  {i === 1 && <FiAlignLeft />}
+                                  {i === 2 && <FiTag />}
+                                  {i === 3 && <FiDollarSign />}
+                                  {i === 4 && <FiCalendar />}
+                                  {i === 5 && <FiAlertCircle />}
+                                  {i === 6 && <FiUser />}
+                                  <span>{label}</span>
+                                </div>
+                                {i < columnWidths.contas.length - 1 && (
+                                  <div
+                                    className="resize-handle"
+                                    onPointerDown={(e) => startResize(e, 'contas', i)}
+                                  />
+                                )}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {contasDetalhadas.map((c) => (
+                            <tr
+                              key={c.id}
+                              className={removingContaId === c.id ? 'removing' : ''}
+                              style={{
+                                transition:
+                                  'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+                                height: removingContaId === c.id ? 0 : 'auto',
+                              }}
+                            >
+                              {/* Pago? */}
+                              <td>
+                                <div
+                                  className={`check-circle ${
+                                    c.status ? 'checked' : ''
+                                  }`}
+                                  onClick={() => !c.status && handleContaCheck(c.id)}
+                                />
+                              </td>
+
+                              {/* Descrição */}
+                              <td>
+                                <span>{c.descricao}</span>
+                              </td>
+
+                              {/* Categoria */}
+                              <td>
+                                <div
+                                  className="tag-display"
+                                  style={{
+                                    backgroundColor: '#eef2ff',
+                                    color: '#3730a3',
+                                  }}
+                                >
+                                  {c.categoria || 'Sem categoria'}
+                                </div>
+                              </td>
+
+                              {/* Valor */}
+                              <td>
+                                <span
+                                  style={{
+                                    fontFamily: 'monospace',
+                                    textAlign: 'right',
+                                    display: 'inline-block',
+                                    width: '100%',
+                                  }}
+                                >
+                                  R$ {isNaN(c.valor) ? '0,00' : c.valor.toLocaleString('pt-BR', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              </td>
+
+                              {/* Vencimento */}
+                              <td>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <FiCalendar />
+                                  {c.datavencimento || '-'}
+                                </div>
+                              </td>
+
+                              {/* Recorrente? */}
+                              <td>
+                                <div
+                                  className="tag-display"
+                                  style={{
+                                    backgroundColor: c.recorrente
+                                      ? '#dcfce7'
+                                      : '#fee2e2',
+                                    color: c.recorrente
+                                      ? '#166534'
+                                      : '#b91c1c',
+                                  }}
+                                >
+                                  {c.recorrente ? 'Sim' : 'Não'}
+                                </div>
+                              </td>
+
+                              {/* Responsável (por enquanto avatar fixo; depois você pode mapear por ID) */}
+                              <td>
+                                <img
+                                  src="/p1.png"
+                                  alt="resp"
+                                  className="resp"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                          {contasDetalhadas.length === 0 && (
+                            <tr>
+                              <td
+                                colSpan={7}
+                                style={{
+                                  textAlign: 'center',
+                                  padding: '16px 8px',
+                                  color: '#9ca3af',
+                                  fontSize: 14,
+                                }}
+                              >
+                                Nenhuma conta cadastrada para este grupo.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Se quiser: botão para criar nova conta depois */}
+                    {/* <div className="add-row" onClick={addContaDetalhada}><FiPlus style={{ fontSize: '18px' }} /></div> */}
                   </section>
 
                   {/* LISTA DE COMPRAS */}
