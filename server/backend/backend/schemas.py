@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from uuid import UUID
 from datetime import datetime
 
 # ==================== AUTENTICAÇÃO ====================
@@ -10,6 +11,7 @@ class CadastroRequest(BaseModel):
     username: str
     data_nascimento: str  # formato: "YYYY-MM-DD"
     profile_image: Optional[str] = "client/frontend/public/fotodeperfil.png"
+    id_group: Optional[int] = None
 
 class LoginRequest(BaseModel):
     email: str
@@ -68,8 +70,9 @@ class TarefasBase(BaseModel):
 class GrupoBase(BaseModel):
     nome: str
     descricao: Optional[str] = None
-    cod_convite: int
-    group_owner: int
+    # código numérico inteiro de 8 dígitos; opcional na criação/edição
+    cod_convite: Optional[int] = None
+    group_owner: str
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None
 

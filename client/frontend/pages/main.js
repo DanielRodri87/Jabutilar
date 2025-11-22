@@ -19,8 +19,8 @@ export default function TelaGrupo() {
     { id: 4, nome: 'Sem categoria', valor: 0, cor: '#A0BF9F' },
     { id: 5, nome: 'Sem categoria', valor: 0, cor: '#9BBFC0' },
   ]);
-
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
+
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
 
@@ -29,7 +29,6 @@ export default function TelaGrupo() {
     tarefas: [50, 220, 130, 110, 120, 70],
     compras: [50, 220, 110, 100, 110, 70]
   });
-
   const isResizing = useRef(null);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -48,18 +47,17 @@ export default function TelaGrupo() {
   useEffect(() => {
     const handlePointerMove = (e) => {
       if (!isResizing.current) return;
-
       if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
-
       animationFrame.current = requestAnimationFrame(() => {
         const { table, colIndex } = isResizing.current;
         const diff = e.clientX - startX.current;
         const newWidth = Math.max(40, startWidth.current + diff);
         const maxWidth = table === 'tarefas' ? 300 : 280;
-
         setColumnWidths(prev => ({
           ...prev,
-          [table]: prev[table].map((w, i) => i === colIndex ? Math.min(newWidth, maxWidth) : w)
+          [table]: prev[table].map((w, i) =>
+            i === colIndex ? Math.min(newWidth, maxWidth) : w
+          )
         }));
       });
     };
@@ -74,12 +72,11 @@ export default function TelaGrupo() {
 
     document.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('pointerup', handlePointerUp);
-
     return () => {
       document.removeEventListener('pointermove', handlePointerMove);
       document.removeEventListener('pointerup', handlePointerUp);
     };
-  }, []);
+  }, [columnWidths]);
 
   // === REMOÇÃO COM ANIMAÇÃO SUAVE ===
   const [removingTaskId, setRemovingTaskId] = useState(null);
@@ -150,7 +147,7 @@ export default function TelaGrupo() {
     }
   }, [selectedGroup]);
 
-  // === GERAR CÓDIGO ===
+  // === GERAR CÓDIGO (fallback) ===
   const generateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
@@ -160,55 +157,182 @@ export default function TelaGrupo() {
     return code;
   };
 
-  // === CRIAR GRUPO ===
-  const handleCreateGroup = (e) => {
+  // === USER ID (do login) ===
+  const [userIdDebug, setUserIdDebug] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get('uid');
+    const storedSession = sessionStorage.getItem('user_id');
+    const storedLocal = localStorage.getItem('user_id');
+    const finalId = fromQuery || storedSession || storedLocal || null;
+    console.log('[main] ID detectado (query/session/local):', {
+      fromQuery,
+      storedSession,
+      storedLocal,
+      final: finalId
+    });
+    if (!finalId) {
+      console.warn('[main] Nenhum user_id encontrado.');
+    }
+    setUserIdDebug(finalId);
+  }, []);
+
+  // === CRIAR GRUPO (BACKEND) ===
+  const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!groupName.trim() || !groupDescription.trim()) return;
+    if (!userIdDebug) {
+      alert('Usuário não identificado. Faça login novamente.');
+      return;
+    }
 
-    const code = generateCode();
-    setGeneratedCode(code);
-    setShowCode(false);
-    setCopied(false);
+    try {
+      const createResp = await fetch('http://localhost:8000/grupo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: groupName,
+          descricao: groupDescription,
+          group_owner: userIdDebug,
+        }),
+      });
 
-    const newGroup = {
-      id: Date.now(),
-      name: groupName,
-      icon: '/planta.png',
-      tarefas: [],
-      compras: [],
-      contas: [...contas]
-    };
+      const createData = await createResp.json();
+      if (!createResp.ok) {
+        console.error('[main] Erro ao criar grupo:', createData);
+        alert(createData.detail || 'Erro ao criar grupo.');
+        return;
+      }
 
-    setGroups(prev => [...prev, newGroup]);
-    setSelectedGroup(newGroup);
-    setShowCreateGroup(false);
-    setShowInviteCode(true);
-    setGroupName('');
-    setGroupDescription('');
-    setInviteCode('');
+      const grupo = createData.data;
+      const grupoId = grupo?.id;
+      const codConvite = grupo?.cod_convite;
+
+      if (!grupoId) {
+        alert('Grupo criado, mas ID não retornado pelo backend.');
+        return;
+      }
+
+      // vincular usuário ao grupo
+      const linkResp = await fetch(
+        `http://localhost:8000/usuario/${encodeURIComponent(
+          userIdDebug
+        )}/grupo?grupo_id=${grupoId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      const linkData = await linkResp.json();
+      if (!linkResp.ok) {
+        console.error('[main] Erro ao vincular usuário ao grupo:', linkData);
+        alert(
+          linkData.detail ||
+          'Grupo criado, mas houve erro ao vincular o usuário ao grupo.'
+        );
+      }
+
+      const newGroup = {
+        id: grupoId,
+        name: grupo.nome,
+        icon: '/planta.png',
+        tarefas: [],
+        compras: [],
+        contas: [...contas],
+      };
+
+      setGroups(prev => [...prev, newGroup]);
+      setSelectedGroup(newGroup);
+      setGeneratedCode(
+        typeof codConvite === 'number' ? String(codConvite) : generateCode()
+      );
+      setShowCode(false);
+      setCopied(false);
+      setShowCreateGroup(false);
+      setShowInviteCode(true);
+      setGroupName('');
+      setGroupDescription('');
+      setInviteCode('');
+    } catch (err) {
+      console.error('[main] Erro inesperado ao criar grupo:', err);
+      alert('Erro inesperado ao criar grupo. Tente novamente.');
+    }
   };
 
-  // === ENTRAR COM CONVITE ===
-  const handleJoinWithInvite = (e) => {
+  // === ENTRAR COM CONVITE (BACKEND) ===
+  const handleJoinWithInvite = async (e) => {
     e.preventDefault();
-    if (!inviteCode.trim() || inviteCode.length !== 20) {
+    const trimmed = inviteCode.trim();
+    if (!trimmed) {
+      alert('Informe o código de convite.');
+      return;
+    }
+    if (!userIdDebug) {
+      alert('Usuário não identificado. Faça login novamente.');
+      return;
+    }
+
+    const numericCode = Number(trimmed);
+    if (Number.isNaN(numericCode)) {
       alert('Código inválido.');
       return;
     }
 
-    const newGroup = {
-      id: Date.now(),
-      name: `Grupo via convite`,
-      icon: '/planta.png',
-      tarefas: [],
-      compras: [],
-      contas: [...contas]
-    };
+    try {
+      const grupoResp = await fetch(
+        `http://localhost:8000/grupo/codigo/${numericCode}`
+      );
+      const grupoData = await grupoResp.json();
+      if (!grupoResp.ok) {
+        console.error('[main] Erro ao buscar grupo por código:', grupoData);
+        alert(grupoData.detail || 'Grupo não encontrado para esse código.');
+        return;
+      }
 
-    setGroups(prev => [...prev, newGroup]);
-    setSelectedGroup(newGroup);
-    setShowCreateGroup(false);
-    setInviteCode('');
+      const grupo = grupoData.data;
+      const grupoId = grupo?.id;
+      if (!grupoId) {
+        alert('Grupo encontrado, mas ID não retornado pelo backend.');
+        return;
+      }
+
+      const linkResp = await fetch(
+        `http://localhost:8000/usuario/${encodeURIComponent(
+          userIdDebug
+        )}/grupo?grupo_id=${grupoId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      const linkData = await linkResp.json();
+      if (!linkResp.ok) {
+        console.error('[main] Erro ao vincular usuário ao grupo (convite):', linkData);
+        alert(
+          linkData.detail ||
+          'Erro ao vincular usuário ao grupo via convite.'
+        );
+        return;
+      }
+
+      const newGroup = {
+        id: grupoId,
+        name: grupo.nome,
+        icon: '/planta.png',
+        tarefas: [],
+        compras: [],
+        contas: [...contas],
+      };
+
+      setGroups(prev => [...prev, newGroup]);
+      setSelectedGroup(newGroup);
+      setShowCreateGroup(false);
+      setInviteCode('');
+    } catch (err) {
+      console.error('[main] Erro inesperado ao entrar por convite:', err);
+      alert('Erro inesperado ao entrar por convite. Tente novamente.');
+    }
   };
 
   // === COPIAR CÓDIGO ===
@@ -258,7 +382,7 @@ export default function TelaGrupo() {
     setContextMenu(null);
   };
 
-  // === TAREFAS ===
+  // === TAREFAS / COMPRAS / CONTAS / CALENDÁRIO ===
   const addTask = () => {
     const newTask = {
       id: Date.now(),
@@ -1039,7 +1163,7 @@ export default function TelaGrupo() {
                   <img src={showCode ? '/naover.png' : '/ver.png'} alt={showCode ? 'Ocultar' : 'Ver'} className={showCode ? 'naover' : ''} />
                 </button>
                 <div className="codeDisplay">
-                  {showCode ? generatedCode : '●●●●●●●●●●●●●●●●●●●●'}
+                  {showCode ? (generatedCode || 'Código não disponível') : '●●●●●●●●●●●●●●●●●●●●'}
                 </div>
               </div>
               <button className={`copyButton ${copied ? 'copied' : ''}`} onClick={handleCopy} type="button">
@@ -1047,6 +1171,15 @@ export default function TelaGrupo() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {userIdDebug && (
+        <div style={{
+          position: 'fixed', bottom: 8, right: 8, background: '#111', color: '#fff',
+          padding: '6px 10px', borderRadius: 8, fontSize: 12, zIndex: 9999, fontFamily: 'monospace'
+        }}>
+          UID: {userIdDebug}
         </div>
       )}
     </>

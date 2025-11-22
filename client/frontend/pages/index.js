@@ -97,13 +97,19 @@ export default function Login() {
             const data = await response.json();
 
             if (response.ok) {
-                console.log('Login realizado com sucesso!', data);
-                
-                // Aqui você pode salvar o token se o backend retornar um
-                // Ex: sessionStorage.setItem('token', data.access_token);
-                
-                // Redirecionamento
-                window.location.href = '/home';
+                console.log('Login realizado com sucesso! Resposta completa:', data);
+
+                // --- NOVO: usar formato padronizado do backend ---
+                const userId = data?.user_id || data?.user?.id;
+                // --- FIM NOVO ---
+
+                if (userId) {
+                    sessionStorage.setItem('user_id', userId);
+                    localStorage.setItem('user_id', userId);
+                } else {
+                    console.warn('ID de usuário não encontrado na resposta de login.');
+                }
+                window.location.href = `/main${userId ? `?uid=${encodeURIComponent(userId)}` : ''}`;
             } else {
                 setErrorMessage(data.detail || 'Erro ao realizar login. Verifique suas credenciais.');
             }
@@ -147,7 +153,9 @@ export default function Login() {
                             const authResult = sessionStorage.getItem('facebook_auth_result');
                             if (authResult === 'success') {
                                 sessionStorage.removeItem('facebook_auth_result');
-                                window.location.href = '/home';
+                                const fbUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || '';
+                                console.log('[facebook] encerrado popup. user_id encontrado:', fbUserId);
+                                window.location.href = `/main${fbUserId ? `?uid=${encodeURIComponent(fbUserId)}` : ''}`;
                             } else if (authResult === 'error') {
                                 sessionStorage.removeItem('facebook_auth_result');
                                 setErrorMessage('Erro no login com Facebook. Tente novamente.');
