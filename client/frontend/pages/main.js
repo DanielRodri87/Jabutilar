@@ -23,6 +23,7 @@ export default function TelaGrupo() {
     { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },     // Roxo
     { id: 4, nome: 'Aluguel', valor: 0, cor: '#EF4444' },      // Vermelho
     { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },  // Verde
+    { id: 7, nome: 'Limpeza', valor: 0, cor: '#EC4899' },     // Rosa
     { id: 6, nome: 'Outros', valor: 0, cor: '#9CA3AF' },       // Cinza
   ]);
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
