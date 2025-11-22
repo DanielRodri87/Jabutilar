@@ -12,14 +12,18 @@ export default function TelaGrupo() {
 
   const [tarefas, setTarefas] = useState([]);
   const [compras, setCompras] = useState([]);
+  
   // NOVO: lista de contas detalhadas (do backend, baseada em ContasBase)
   const [contasDetalhadas, setContasDetalhadas] = useState([]);
+
+  // DASHBOARD FIXO: Categorias fixas conforme solicitado
   const [contas, setContas] = useState([
-    { id: 1, nome: 'Sem categoria', valor: 0, cor: '#91B6E4' },
-    { id: 2, nome: 'Sem categoria', valor: 0, cor: '#E4A87B' },
-    { id: 3, nome: 'Sem categoria', valor: 0, cor: '#B57BE4' },
-    { id: 4, nome: 'Sem categoria', valor: 0, cor: '#A0BF9F' },
-    { id: 5, nome: 'Sem categoria', valor: 0, cor: '#9BBFC0' },
+    { id: 1, nome: 'Energia', valor: 0, cor: '#F59E0B' },      // Laranja
+    { id: 2, nome: 'Água', valor: 0, cor: '#3B82F6' },         // Azul
+    { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },     // Roxo
+    { id: 4, nome: 'Aluguel', valor: 0, cor: '#EF4444' },      // Vermelho
+    { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },  // Verde
+    { id: 6, nome: 'Outros', valor: 0, cor: '#9CA3AF' },       // Cinza
   ]);
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
 
@@ -30,7 +34,7 @@ export default function TelaGrupo() {
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
     compras: [50, 220, 110, 100, 110, 70],
-    // NOVO: colunas da lista de contas (Pago?, Descrição, Categoria, Valor, Vencimento, Recorrente?, Responsável)
+    // colunas da lista de contas (Pago?, Descrição, Categoria, Valor, Vencimento, Recorrente?, Responsável)
     contas:  [50, 220, 130, 100, 120, 120, 70],
   });
   const isResizing = useRef(null);
@@ -85,7 +89,6 @@ export default function TelaGrupo() {
   // === REMOÇÃO COM ANIMAÇÃO SUAVE ===
   const [removingTaskId, setRemovingTaskId] = useState(null);
   const [removingCompraId, setRemovingCompraId] = useState(null);
-  // NOVO: remoção suave de contas detalhadas
   const [removingContaId, setRemovingContaId] = useState(null);
 
   const handleTaskCheck = (taskId) => {
@@ -104,7 +107,7 @@ export default function TelaGrupo() {
     }, 280);
   };
 
-  // NOVO: marcar conta como paga (remoção suave da linha localmente)
+  // Marcar conta como paga (remoção suave)
   const handleContaCheck = (contaId) => {
     setRemovingContaId(contaId);
     setTimeout(() => {
@@ -126,6 +129,7 @@ export default function TelaGrupo() {
   // === EDIÇÃO INLINE ===
   const [editingTask, setEditingTask] = useState(null);
   const [editingCompra, setEditingCompra] = useState(null);
+  const [editingConta, setEditingConta] = useState(null); // NOVO: para editar conta detalhada
   const [showDatePicker, setShowDatePicker] = useState(null);
 
   // === MENU DE CONTEXTO ===
@@ -158,8 +162,11 @@ export default function TelaGrupo() {
       prevSelectedRef.current = selectedGroup;
       setTarefas(selectedGroup.tarefas || []);
       setCompras(selectedGroup.compras || []);
-      setContas(selectedGroup.contas || []);
-      // NOVO: ao trocar de grupo, buscar contas detalhadas no backend
+      // Se o grupo salvo tiver dados de dashboard, usa. Senão, usa o padrão fixo.
+      if (selectedGroup.contas && selectedGroup.contas.length > 0) {
+         setContas(selectedGroup.contas);
+      }
+      // ao trocar de grupo, buscar contas detalhadas no backend
       carregarContasDoGrupo(selectedGroup.id);
     }
   }, [selectedGroup]);
@@ -189,32 +196,22 @@ export default function TelaGrupo() {
     const storedSession = sessionStorage.getItem('user_id');
     const storedLocal = localStorage.getItem('user_id');
     const finalId = fromQuery || storedSession || storedLocal || null;
-    console.log('[main] ID detectado (query/session/local):', {
-      fromQuery,
-      storedSession,
-      storedLocal,
-      final: finalId
-    });
+    
     if (!finalId) {
-      console.warn('[main] Nenhum user_id encontrado.');
       setInitialLoading(false);
       return;
     }
     setUserIdDebug(finalId);
 
-    // NOVO: tenta carregar extra_data do storage para montar o perfil
     try {
       const rawExtra =
         sessionStorage.getItem('user_extra') ||
         localStorage.getItem('user_extra');
       if (rawExtra) {
         const extra = JSON.parse(rawExtra);
-        // ajuste estes campos conforme as colunas da tabela user_data
         const name = extra?.name || extra?.username || 'Jabuti de lago';
         let image = extra?.image || '/p1.png';
 
-        // se no banco você salva caminho relativo ("client/frontend/public/..."),
-        // converte para o path público consumido pelo Next ("/fotodeperfil.png", por ex.)
         if (typeof image === 'string' && image.includes('public/')) {
           const idx = image.indexOf('public/');
           image = '/' + image.substring(idx + 'public/'.length);
@@ -227,7 +224,7 @@ export default function TelaGrupo() {
     }
   }, []);
 
-  // NOVO: função para buscar contas do grupo no backend
+  // Função para buscar contas do grupo no backend
   const carregarContasDoGrupo = async (grupoId) => {
     if (!grupoId) return;
     try {
@@ -238,7 +235,6 @@ export default function TelaGrupo() {
         setContasDetalhadas([]);
         return;
       }
-      // backend retorna algo como { message, data: [...] }
       const lista = Array.isArray(data.data) ? data.data : [];
       setContasDetalhadas(lista);
     } catch (err) {
@@ -247,7 +243,7 @@ export default function TelaGrupo() {
     }
   };
 
-  // NOVO: quando tivermos o userIdDebug, buscar user_data e grupo associado
+  // Carregar grupo do usuário
   useEffect(() => {
     const carregarGrupoDoUsuario = async () => {
       if (!userIdDebug) {
@@ -259,7 +255,6 @@ export default function TelaGrupo() {
           `http://localhost:8000/usuario/${encodeURIComponent(userIdDebug)}`
         );
         if (!respUser.ok) {
-          console.warn('[main] Não foi possível carregar user_data pelo backend.');
           setInitialLoading(false);
           return;
         }
@@ -267,7 +262,6 @@ export default function TelaGrupo() {
         const item = userData?.data || userData;
         const grupoId = item?.id_group;
 
-        // NOVO: atualiza perfil com dados mais recentes do backend
         try {
           const name = item?.name || item?.username || userProfile.name;
           let image = item?.image || userProfile.image;
@@ -276,22 +270,17 @@ export default function TelaGrupo() {
             image = '/' + image.substring(idx + 'public/'.length);
           }
           setUserProfile({ name, image });
-        } catch (e) {
-          console.warn('[main] Falha ao atualizar perfil a partir de user_data:', e);
-        }
+        } catch (e) {}
 
         if (!grupoId) {
-          // Usuário sem grupo: mantém popup de criação
           setShowCreateGroup(true);
           setInitialLoading(false);
           return;
         }
 
-        // Carregar grupo pelo ID
         const respGrupo = await fetch(`http://localhost:8000/grupo/${grupoId}`);
         const grupoData = await respGrupo.json();
         if (!respGrupo.ok || !grupoData?.data) {
-          console.warn('[main] Grupo vinculado não encontrado:', grupoData);
           setShowCreateGroup(true);
           setInitialLoading(false);
           return;
@@ -299,19 +288,18 @@ export default function TelaGrupo() {
 
         const grupo = grupoData.data;
 
-        // Monta objeto local para sidebar/dashboard
         const loadedGroup = {
           id: grupo.id,
           name: grupo.nome,
           icon: '/planta.png',
           tarefas: [],
           compras: [],
-          contas: [...contas],
+          contas: [...contas], // Usa o estado inicial (fixo) ou o que vier do back
         };
 
         setGroups([loadedGroup]);
         setSelectedGroup(loadedGroup);
-        setShowCreateGroup(false); // não mostrar popup, já pertence a grupo
+        setShowCreateGroup(false);
         setInitialLoading(false);
       } catch (err) {
         console.error('[main] Erro ao carregar grupo do usuário:', err);
@@ -346,7 +334,6 @@ export default function TelaGrupo() {
 
       const createData = await createResp.json();
       if (!createResp.ok) {
-        console.error('[main] Erro ao criar grupo:', createData);
         alert(createData.detail || 'Erro ao criar grupo.');
         return;
       }
@@ -355,13 +342,9 @@ export default function TelaGrupo() {
       const grupoId = grupo?.id;
       const codConvite = grupo?.cod_convite;
 
-      if (!grupoId) {
-        alert('Grupo criado, mas ID não retornado pelo backend.');
-        return;
-      }
+      if (!grupoId) return;
 
-      // vincular usuário ao grupo
-      const linkResp = await fetch(
+      await fetch(
         `http://localhost:8000/usuario/${encodeURIComponent(
           userIdDebug
         )}/grupo?grupo_id=${grupoId}`,
@@ -370,14 +353,6 @@ export default function TelaGrupo() {
           headers: { 'Content-Type': 'application/json' },
         }
       );
-      const linkData = await linkResp.json();
-      if (!linkResp.ok) {
-        console.error('[main] Erro ao vincular usuário ao grupo:', linkData);
-        alert(
-          linkData.detail ||
-          'Grupo criado, mas houve erro ao vincular o usuário ao grupo.'
-        );
-      }
 
       const newGroup = {
         id: grupoId,
@@ -401,8 +376,7 @@ export default function TelaGrupo() {
       setGroupDescription('');
       setInviteCode('');
     } catch (err) {
-      console.error('[main] Erro inesperado ao criar grupo:', err);
-      alert('Erro inesperado ao criar grupo. Tente novamente.');
+      alert('Erro inesperado ao criar grupo.');
     }
   };
 
@@ -410,14 +384,8 @@ export default function TelaGrupo() {
   const handleJoinWithInvite = async (e) => {
     e.preventDefault();
     const trimmed = inviteCode.trim();
-    if (!trimmed) {
-      alert('Informe o código de convite.');
-      return;
-    }
-    if (!userIdDebug) {
-      alert('Usuário não identificado. Faça login novamente.');
-      return;
-    }
+    if (!trimmed) return;
+    if (!userIdDebug) return;
 
     const numericCode = Number(trimmed);
     if (Number.isNaN(numericCode)) {
@@ -431,18 +399,13 @@ export default function TelaGrupo() {
       );
       const grupoData = await grupoResp.json();
       if (!grupoResp.ok) {
-        console.error('[main] Erro ao buscar grupo por código:', grupoData);
-        alert(grupoData.detail || 'Grupo não encontrado para esse código.');
+        alert(grupoData.detail || 'Grupo não encontrado.');
         return;
       }
 
       const grupo = grupoData.data;
       const grupoId = grupo?.id;
-      if (!grupoId) {
-        alert('Grupo encontrado, mas ID não retornado pelo backend.');
-        return;
-      }
-
+      
       const linkResp = await fetch(
         `http://localhost:8000/usuario/${encodeURIComponent(
           userIdDebug
@@ -452,15 +415,8 @@ export default function TelaGrupo() {
           headers: { 'Content-Type': 'application/json' },
         }
       );
-      const linkData = await linkResp.json();
-      if (!linkResp.ok) {
-        console.error('[main] Erro ao vincular usuário ao grupo (convite):', linkData);
-        alert(
-          linkData.detail ||
-          'Erro ao vincular usuário ao grupo via convite.'
-        );
-        return;
-      }
+
+      if (!linkResp.ok) return;
 
       const newGroup = {
         id: grupoId,
@@ -476,19 +432,16 @@ export default function TelaGrupo() {
       setShowCreateGroup(false);
       setInviteCode('');
     } catch (err) {
-      console.error('[main] Erro inesperado ao entrar por convite:', err);
-      alert('Erro inesperado ao entrar por convite. Tente novamente.');
+      alert('Erro inesperado.');
     }
   };
 
-  // === COPIAR CÓDIGO ===
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 5000);
   };
 
-  // === FECHAR POPUPS ===
   const closePopups = () => {
     setShowCreateGroup(false);
     setShowInviteCode(false);
@@ -528,7 +481,7 @@ export default function TelaGrupo() {
     setContextMenu(null);
   };
 
-  // === TAREFAS / COMPRAS / CONTAS / CALENDÁRIO ===
+  // === TAREFAS ===
   const addTask = () => {
     const newTask = {
       id: Date.now(),
@@ -552,7 +505,6 @@ export default function TelaGrupo() {
     setTarefas(prev => prev.filter(t => t.id !== id));
   };
 
-  // === CICLO DE STATUS ===
   const cycleStatus = (taskId) => {
     setTarefas(prev => prev.map(t => {
       if (t.id !== taskId) return t;
@@ -563,7 +515,6 @@ export default function TelaGrupo() {
     }));
   };
 
-  // === CICLO DE PRIORIDADE ===
   const cyclePrioridade = (id, isTask = true) => {
     const setter = isTask ? setTarefas : setCompras;
     setter(prev => prev.map(item => {
@@ -575,7 +526,7 @@ export default function TelaGrupo() {
     }));
   };
 
-  // === CICLO DE TIPO (COMPRAS) ===
+  // === COMPRAS ===
   const cycleTipo = (compraId) => {
     setCompras(prev => prev.map(c => {
       if (c.id !== compraId) return c;
@@ -586,7 +537,6 @@ export default function TelaGrupo() {
     }));
   };
 
-  // === COMPRAS ===
   const addCompra = () => {
     const newCompra = {
       id: Date.now(),
@@ -610,19 +560,62 @@ export default function TelaGrupo() {
     setCompras(prev => prev.filter(c => c.id !== id));
   };
 
+  // === CONTAS DETALHADAS (NOVO: CADASTRAR/EDITAR) ===
+  const addContaDetalhada = () => {
+    const newConta = {
+      id: Date.now(),
+      status: false,
+      descricao: '',
+      categoria: 'Outros',
+      valor: 0,
+      datavencimento: '',
+      recorrente: false,
+      responsavel: '/p1.png',
+      editing: true
+    };
+    setContasDetalhadas(prev => [...prev, newConta]);
+    setEditingConta(newConta.id);
+  };
+
+  const saveContaDetalhada = (id) => {
+    setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, editing: false } : c));
+    setEditingConta(null);
+  };
+
+  const deleteContaDetalhada = (id) => {
+    setContasDetalhadas(prev => prev.filter(c => c.id !== id));
+  };
+
+  const cycleCategoriaConta = (contaId) => {
+    setContasDetalhadas(prev => prev.map(c => {
+      if (c.id !== contaId) return c;
+      // Categorias fixas solicitadas
+      const order = ['Energia', 'Água', 'Internet', 'Aluguel', 'Outros'];
+      const currentIndex = order.indexOf(c.categoria);
+      const nextIndex = (currentIndex + 1) % order.length;
+      return { ...c, categoria: order[nextIndex] };
+    }));
+  };
+
+  const updateContaDetalhadaValor = (id, inputValue) => {
+    const digits = inputValue.replace(/\D/g, '');
+    if (!digits) {
+      setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, valor: 0 } : c));
+      return;
+    }
+    const number = parseInt(digits, 10);
+    const finalValue = (number / 100); // mantém como float no estado
+    setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
+  };
+
   // === FORMATAÇÃO DE MOEDA ===
   const formatCurrency = (value) => {
     if (!value && value !== 0) return '';
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // === ATUALIZAR CONTA ===
-  const updateConta = (id, field, inputValue) => {
-    if (field !== 'valor') {
-      setContas(prev => prev.map(c => c.id === id ? { ...c, [field]: inputValue } : c));
-      return;
-    }
-
+  // === ATUALIZAR CONTA (DASHBOARD - APENAS VALOR) ===
+  const updateContaDashboard = (id, inputValue) => {
     const digits = inputValue.replace(/\D/g, '');
     if (!digits) {
       setContas(prev => prev.map(c => c.id === id ? { ...c, valor: 0 } : c));
@@ -637,7 +630,6 @@ export default function TelaGrupo() {
     setContas(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
   };
 
-  // === ATUALIZAR VALOR DE COMPRA ===
   const updateCompraValor = (id, inputValue) => {
     const digits = inputValue.replace(/\D/g, '');
     if (!digits) {
@@ -650,12 +642,21 @@ export default function TelaGrupo() {
     setCompras(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
   };
 
-  // === CALENDÁRIO ===
-  const renderDatePicker = (taskId, currentDate) => {
+  // === CALENDÁRIO COMPARTILHADO (TAREFAS E CONTAS) ===
+  const renderDatePicker = (itemId, currentDate, isTask = true) => {
     const date = currentDate ? new Date(currentDate) : new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const setDate = (dateStr) => {
+      if (isTask) {
+        setTarefas(prev => prev.map(t => t.id === itemId ? { ...t, data: dateStr } : t));
+      } else {
+        setContasDetalhadas(prev => prev.map(c => c.id === itemId ? { ...c, datavencimento: dateStr } : c));
+      }
+      setShowDatePicker(null);
+    };
 
     return (
       <div style={{
@@ -681,10 +682,7 @@ export default function TelaGrupo() {
                   color: currentDate === dateStr ? '#000' : '#333',
                   fontWeight: currentDate === dateStr ? 600 : 400
                 }}
-                onClick={() => {
-                  setTarefas(prev => prev.map(t => t.id === taskId ? { ...t, data: dateStr } : t));
-                  setShowDatePicker(null);
-                }}
+                onClick={() => setDate(dateStr)}
               >
                 {day}
               </div>
@@ -751,40 +749,11 @@ export default function TelaGrupo() {
         .th-label{display:flex;align-items:center;gap:6px;font-weight:300;font-size:14px;color:#000;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
         .th-label svg{width:16px;height:16px;opacity:.75;flex-shrink:0;}
 
-        /* HACHURAS DIAGONAL NO CANTO INFERIOR DIREITO */
-        .resize-handle {
-          position: absolute;
-          right: 6px;
-          bottom: 6px;
-          width: 12px;
-          height: 12px;
-          cursor: col-resize;
-          z-index: 1;
-          opacity: 0.25;
-          transition: opacity .2s;
-        }
-        .resize-handle:hover {
-          opacity: 0.6;
-        }
-        .resize-handle::before,
-        .resize-handle::after {
-          content: '';
-          position: absolute;
-          width: 8px;
-          height: 1px;
-          background: #888;
-          border-radius: 1px;
-        }
-        .resize-handle::before {
-          transform: rotate(45deg);
-          top: 4px;
-          left: 2px;
-        }
-        .resize-handle::after {
-          transform: rotate(-45deg);
-          top: 7px;
-          left: 2px;
-        }
+        .resize-handle {position: absolute;right: 6px;bottom: 6px;width: 12px;height: 12px;cursor: col-resize;z-index: 1;opacity: 0.25;transition: opacity .2s;}
+        .resize-handle:hover {opacity: 0.6;}
+        .resize-handle::before, .resize-handle::after {content: '';position: absolute;width: 8px;height: 1px;background: #888;border-radius: 1px;}
+        .resize-handle::before {transform: rotate(45deg);top: 4px;left: 2px;}
+        .resize-handle::after {transform: rotate(-45deg);top: 7px;left: 2px;}
 
         .tag-display{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;font-weight:700;font-size:13px;min-height:28px;cursor:pointer;transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
         .tag-display svg{width:12px;height:12px;flex-shrink:0;}
@@ -796,20 +765,12 @@ export default function TelaGrupo() {
         .edit-input{width:100%;border:none;outline:none;font-size:14px;padding:4px 0;background:#fafafa;border-radius:4px;}
         .edit-input:focus{background:#fff;box-shadow:0 0 0 1px #667467;}
 
-        /* ANIMAÇÃO DE REMOÇÃO SUAVE */
-        .removing {
-          opacity: 0;
-          transform: translateY(-8px);
-          height: 0 !important;
-          padding-top: 0 !important;
-          padding-bottom: 0 !important;
-          margin: 0 !important;
-          overflow: hidden;
-        }
+        .removing {opacity: 0;transform: translateY(-8px);height: 0 !important;padding-top: 0 !important;padding-bottom: 0 !important;margin: 0 !important;overflow: hidden;}
 
         .lista-contas{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;list-style:none;padding:0;}
         .conta-item{display:flex;align-items:center;gap:12px;font-size:14.5px;background:#fafafa;padding:8px 12px;border-radius:12px;}
         .bolinha{width:28px;height:28px;border-radius:50%;flex-shrink:0;}
+        .conta-nome{font-weight:600;flex:1;} 
         .conta-input{border:none;outline:none;font-size:14.5px;padding:2px 0;width:100%;background:transparent;font-weight:600;}
         .conta-input:focus{background:#fff;border-radius:4px;box-shadow:0 0 0 1px #667467;}
         .valor-input{text-align:right;font-family:monospace;letter-spacing:0.5px;}
@@ -864,7 +825,6 @@ export default function TelaGrupo() {
       `}</style>
 
       <div className="container">
-        {/* Se ainda estiver carregando o grupo inicial, mostra só uma mensagem simples */}
         {initialLoading ? (
           <main className="main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
             <p>Carregando seu grupo...</p>
@@ -873,7 +833,6 @@ export default function TelaGrupo() {
           <>
             <aside className="sidebar">
               <div className="profile">
-                {/* USAR FOTO/NOME DINÂMICOS */}
                 <img src={userProfile.image} alt="perfil" />
                 <span>{userProfile.name}</span>
               </div>
@@ -946,7 +905,50 @@ export default function TelaGrupo() {
                     </div>
                   </div>
 
-                  {/* TAREFAS */}
+                  {/* CONTAS (DASHBOARD) - MOVIDO PARA CIMA */}
+                  <section className="dashboard">
+                    <h3>Dashboard Financeiro</h3>
+                    <div className="total-container">
+                      <div className="total-value">R$ {formatCurrency(totalContas)}</div>
+                      <div className="total-label">Montante total do mês</div>
+                    </div>
+
+                    <div className="bar-container">
+                      <div className="bar">
+                        {contas.map(c => c.valor > 0 && (
+                          <div
+                            key={c.id}
+                            className="bar-segment"
+                            style={{
+                              backgroundColor: c.cor,
+                              flex: `${c.valor} 1 0`,
+                              minWidth: totalContas > 0 ? '10px' : '0'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="lista-contas">
+                      {contas.map(c => (
+                        <li key={c.id} className="conta-item">
+                          <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
+                          {/* Nome fixo, não editável */}
+                          <span className="conta-nome">{c.nome}</span>
+                          <input
+                            type="text"
+                            className="conta-input valor-input"
+                            value={c.valor > 0 ? formatCurrency(c.valor) : ''}
+                            onChange={e => updateContaDashboard(c.id, e.target.value)}
+                            placeholder="R$ 0,00"
+                            style={{ width: 90 }}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+
+                  {/* TAREFAS - MOVIDO PARA BAIXO */}
                   <section className="dashboard">
                     <h3>Tarefas</h3>
                     <div style={{ overflow: 'hidden', borderRadius: 12 }}>
@@ -1047,7 +1049,7 @@ export default function TelaGrupo() {
                                   <FiCalendar />
                                   {t.data || 'Selecionar'}
                                 </div>
-                                {showDatePicker === t.id && renderDatePicker(t.id, t.data)}
+                                {showDatePicker === t.id && renderDatePicker(t.id, t.data, true)}
                               </td>
                               <td>
                                 <img src={t.responsavel} alt="resp" className="resp" />
@@ -1063,55 +1065,7 @@ export default function TelaGrupo() {
                     <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
                   </section>
 
-                  {/* CONTAS (card atual de barras + inputs resumidos) */}
-                  <section className="dashboard">
-                    <h3>Contas</h3>
-                    <div className="total-container">
-                      <div className="total-value">R$ {formatCurrency(totalContas)}</div>
-                      <div className="total-label">Montante total do mês</div>
-                    </div>
-
-                    <div className="bar-container">
-                      <div className="bar">
-                        {contas.map(c => c.valor > 0 && (
-                          <div
-                            key={c.id}
-                            className="bar-segment"
-                            style={{
-                              backgroundColor: c.cor,
-                              flex: `${c.valor} 1 0`,
-                              minWidth: totalContas > 0 ? '10px' : '0'
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <ul className="lista-contas">
-                      {contas.map(c => (
-                        <li key={c.id} className="conta-item">
-                          <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
-                          <input
-                            type="text"
-                            className="conta-input"
-                            value={c.nome}
-                            onChange={e => updateConta(c.id, 'nome', e.target.value)}
-                            placeholder="Sem categoria"
-                          />
-                          <input
-                            type="text"
-                            className="conta-input valor-input"
-                            value={c.valor > 0 ? formatCurrency(c.valor) : ''}
-                            onChange={e => updateConta(c.id, 'valor', e.target.value)}
-                            placeholder="R$ 0,00"
-                            style={{ width: 90 }}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-
-                  {/* NOVO: LISTA DE CONTAS (DETALHADA, BASEADA EM ContasBase) */}
+                  {/* LISTA DE CONTAS DETALHADA - COM BOTÃO DE CADASTRAR */}
                   <section className="dashboard">
                     <h3>Lista de contas</h3>
                     <div style={{ overflow: 'hidden', borderRadius: 12 }}>
@@ -1159,27 +1113,35 @@ export default function TelaGrupo() {
                               key={c.id}
                               className={removingContaId === c.id ? 'removing' : ''}
                               style={{
-                                transition:
-                                  'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+                                transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
                                 height: removingContaId === c.id ? 0 : 'auto',
                               }}
                             >
-                              {/* Pago? */}
                               <td>
                                 <div
-                                  className={`check-circle ${
-                                    c.status ? 'checked' : ''
-                                  }`}
+                                  className={`check-circle ${c.status ? 'checked' : ''}`}
                                   onClick={() => !c.status && handleContaCheck(c.id)}
                                 />
                               </td>
 
-                              {/* Descrição */}
+                              {/* Descrição com Edição */}
                               <td>
-                                <span>{c.descricao}</span>
+                                {c.editing || editingConta === c.id ? (
+                                  <input
+                                    type="text"
+                                    className="edit-input"
+                                    value={c.descricao}
+                                    onChange={e => setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, descricao: e.target.value } : item))}
+                                    onBlur={() => saveContaDetalhada(c.id)}
+                                    onKeyDown={e => e.key === 'Enter' && saveContaDetalhada(c.id)}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span onClick={() => setEditingConta(c.id)}>{c.descricao || 'Nova conta'}</span>
+                                )}
                               </td>
 
-                              {/* Categoria */}
+                              {/* Categoria com Ciclo */}
                               <td>
                                 <div
                                   className="tag-display"
@@ -1187,40 +1149,37 @@ export default function TelaGrupo() {
                                     backgroundColor: '#eef2ff',
                                     color: '#3730a3',
                                   }}
+                                  onClick={() => cycleCategoriaConta(c.id)}
                                 >
-                                  {c.categoria || 'Sem categoria'}
+                                  {c.categoria} <FiChevronDown />
                                 </div>
                               </td>
 
-                              {/* Valor */}
+                              {/* Valor Editável */}
                               <td>
-                                <span
-                                  style={{
-                                    fontFamily: 'monospace',
-                                    textAlign: 'right',
-                                    display: 'inline-block',
-                                    width: '100%',
-                                  }}
-                                >
-                                  R$ {isNaN(c.valor) ? '0,00' : c.valor.toLocaleString('pt-BR', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </span>
+                                <input
+                                  type="text"
+                                  className="edit-input"
+                                  value={c.valor > 0 ? formatCurrency(c.valor) : ''}
+                                  onChange={e => updateContaDetalhadaValor(c.id, e.target.value)}
+                                  placeholder="R$ 0,00"
+                                  style={{ width: 80, textAlign: 'right', fontFamily: 'monospace' }}
+                                />
                               </td>
 
                               {/* Vencimento */}
                               <td>
                                 <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4,
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowDatePicker(showDatePicker === c.id ? null : c.id);
                                   }}
+                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                                 >
                                   <FiCalendar />
-                                  {c.datavencimento || '-'}
+                                  {c.datavencimento || 'Selecionar'}
                                 </div>
+                                {showDatePicker === c.id && renderDatePicker(c.id, c.datavencimento, false)}
                               </td>
 
                               {/* Recorrente? */}
@@ -1228,48 +1187,28 @@ export default function TelaGrupo() {
                                 <div
                                   className="tag-display"
                                   style={{
-                                    backgroundColor: c.recorrente
-                                      ? '#dcfce7'
-                                      : '#fee2e2',
-                                    color: c.recorrente
-                                      ? '#166534'
-                                      : '#b91c1c',
+                                    backgroundColor: c.recorrente ? '#dcfce7' : '#fee2e2',
+                                    color: c.recorrente ? '#166534' : '#b91c1c',
                                   }}
+                                  onClick={() => setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: !item.recorrente } : item))}
                                 >
                                   {c.recorrente ? 'Sim' : 'Não'}
                                 </div>
                               </td>
 
-                              {/* Responsável (por enquanto avatar fixo; depois você pode mapear por ID) */}
                               <td>
-                                <img
-                                  src="/p1.png"
-                                  alt="resp"
-                                  className="resp"
-                                />
+                                <img src={c.responsavel} alt="resp" className="resp" />
+                                {c.editing && (
+                                  <FiTrash2 style={{ marginLeft: 8, cursor: 'pointer', color: '#dc2626' }} onClick={() => deleteContaDetalhada(c.id)} />
+                                )}
                               </td>
                             </tr>
                           ))}
-                          {contasDetalhadas.length === 0 && (
-                            <tr>
-                              <td
-                                colSpan={7}
-                                style={{
-                                  textAlign: 'center',
-                                  padding: '16px 8px',
-                                  color: '#9ca3af',
-                                  fontSize: 14,
-                                }}
-                              >
-                                Nenhuma conta cadastrada para este grupo.
-                              </td>
-                            </tr>
-                          )}
                         </tbody>
                       </table>
                     </div>
-                    {/* Se quiser: botão para criar nova conta depois */}
-                    {/* <div className="add-row" onClick={addContaDetalhada}><FiPlus style={{ fontSize: '18px' }} /></div> */}
+                    {/* BOTÃO DE CADASTRAR CONTA */}
+                    <div className="add-row" onClick={addContaDetalhada}><FiPlus style={{ fontSize: '18px' }} /></div>
                   </section>
 
                   {/* LISTA DE COMPRAS */}
