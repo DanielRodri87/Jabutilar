@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiEndpoints } from '../config/api';
-import { getAuthUrl } from '../config/oauth';
 
 export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
@@ -131,6 +130,7 @@ export default function Login() {
         }
     }
 
+    // Função unificada para Login Social (Google e Facebook)
     async function handleSocialLogin(provider) {
         try {
             setSocialLoading(prev => ({ ...prev, [provider]: true }));
@@ -138,11 +138,10 @@ export default function Login() {
             
             console.log(`Iniciando login com ${provider}`);
             
-            // --- CORREÇÃO: Usar sempre a rota do Backend para gerar a URL ---
-            // Isso garante que o estado (state) seja registrado no Supabase,
-            // prevenindo o erro "invalid flow state".
+            // Determina a URL base. Usa apiEndpoints se disponível, senão localhost
+            const baseUrl = apiEndpoints.base || 'http://localhost:8000';
             
-            const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
+            const response = await fetch(`${baseUrl}/auth/${provider}/url`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -158,7 +157,7 @@ export default function Login() {
             if (data.url && typeof window !== 'undefined') {
                 sessionStorage.setItem('oauth_provider', provider);
                 
-                const width = 600;
+                const width = 500;
                 const height = 600;
                 const left = (window.screen.width / 2) - (width / 2);
                 const top = (window.screen.height / 2) - (height / 2);
@@ -174,21 +173,25 @@ export default function Login() {
                         clearInterval(checkClosed);
                         setSocialLoading(prev => ({ ...prev, [provider]: false }));
                         
-                        // Verifica se o callback (facebook/callback.js) salvou o resultado na sessão
-                        // O callback deve salvar 'facebook_auth_result' como 'success' ou 'error'
-                        // Como agora usamos o backend para todos, você pode padronizar para verificar 'social_auth_result' 
-                        // ou manter 'facebook_auth_result' se o seu callback.js específico do Facebook estiver fazendo isso.
-                        
-                        // Verificando especificamente para o Facebook conforme seu callback atual:
-                        const authResult = sessionStorage.getItem('facebook_auth_result');
+                        // Define qual chave buscar no sessionStorage baseado no provider
+                        // 'facebook' -> 'facebook_auth_result'
+                        // 'google'   -> 'google_auth_result'
+                        const resultKey = `${provider}_auth_result`;
+                        const authResult = sessionStorage.getItem(resultKey);
                         
                         if (authResult === 'success') {
-                            sessionStorage.removeItem('facebook_auth_result');
+                            sessionStorage.removeItem(resultKey);
+                            
                             const userId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || '';
+                            const showProfile = sessionStorage.getItem('show_profile_selector');
+                            
                             console.log(`[${provider}] Login encerrado com sucesso. user_id:`, userId);
-                            window.location.href = `/main${userId ? `?uid=${encodeURIComponent(userId)}` : ''}`;
+                            
+                            // Redireciona
+                            window.location.href = `/main${userId ? `?uid=${encodeURIComponent(userId)}` : ''}${showProfile ? '&new=true' : ''}`;
+                            
                         } else if (authResult === 'error') {
-                            sessionStorage.removeItem('facebook_auth_result');
+                            sessionStorage.removeItem(resultKey);
                             setErrorMessage(`Erro no login com ${provider}. Tente novamente.`);
                         }
                     }
@@ -203,7 +206,7 @@ export default function Login() {
             setSocialLoading(prev => ({ ...prev, [provider]: false }));
         }
     }
-
+    
     return (
         <>
             <style>{`
