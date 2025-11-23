@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from .social_auth import process_social_callback
+
 from .schemas import (
     CadastroRequest, 
     LoginRequest, 
@@ -47,6 +50,9 @@ from .contas import (
     deletar_conta
 )
 
+class CallbackRequest(BaseModel):
+    code: str
+
 from typing import List, Optional
 
 app = FastAPI(
@@ -73,6 +79,14 @@ def cadastro(req: CadastroRequest):
 def login(req: LoginRequest):
     """Realizar login de usuário"""
     return login_usuario(req)
+
+@app.post("/auth/callback", tags=["Autenticação Social"])
+def callback_social(req: CallbackRequest):
+    """
+    Processa o código retornado pelo provedor (Facebook/Google)
+    """
+    from .social_auth import process_social_callback # Importação local para evitar ciclo se necessário
+    return process_social_callback(req.code)
 
 @app.get("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
 def obter_dados_usuario(id_user: str):

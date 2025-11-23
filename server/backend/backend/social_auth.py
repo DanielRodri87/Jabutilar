@@ -6,6 +6,60 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def process_social_callback(code: str):
+    """
+    Troca o código de autorização por uma sessão e atualiza/cria o usuário
+    """
+    try:
+        # 1. Trocar o código pela sessão (Supabase Auth)
+        auth_response = supabase.auth.exchange_code_for_session({"auth_code": code})
+        
+        if not auth_response.user:
+            raise HTTPException(status_code=400, detail="Não foi possível obter dados do usuário")
+
+        user = auth_response.user
+        user_id = user.id
+        
+        # 2. Extrair dados do provedor (Facebook/Google)
+        meta = user.user_metadata or {}
+        full_name = meta.get('full_name') or meta.get('name') or meta.get('email', '').split('@')[0]
+        # Nota: O avatar vindo do social auth geralmente expira, então preferimos que o usuário escolha um local.
+        
+        # 3. Atualizar ou Criar na tabela user_data
+        existing = supabase.table("user_data").select("*").eq("id", user_id).execute()
+        
+        is_new_user = False
+        current_data = {}
+
+        if not existing.data:
+            # Novo usuário
+            is_new_user = True
+            new_data = {
+                "id": user_id, # Importante vincular o ID do Auth
+                "name": full_name,
+                "username": meta.get('email'), # Fallback
+                "profile_image": "/fotodeperfil.png" # Imagem padrão para forçar escolha
+            }
+            res = supabase.table("user_data").insert(new_data).execute()
+            current_data = res.data[0] if res.data else new_data
+        else:
+            # Usuário existente - Atualiza nome se necessário ou mantém
+            # Não sobrescrevemos a imagem se ele já mudou
+            current_data = existing.data[0]
+        
+        return {
+            "message": "Login realizado com sucesso",
+            "user_id": user_id,
+            "user_data": current_data,
+            "is_new_user": is_new_user,
+            "token": auth_response.session.access_token
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no callback social: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao processar login social: {str(e)}")
+
 def login_social(req: SocialAuthRequest):
     """
     Realiza login/cadastro usando autenticação social (Google, Facebook, Apple)
@@ -87,7 +141,7 @@ def get_oauth_url(provider: str, redirect_uri: str = None):
         
         # URL de redirecionamento padrão
         if not redirect_uri:
-            redirect_uri = "http://localhost:3000/auth/callback"
+            redirect_uri = "http://localhost:3000/auth/facebook/callback"
         
         # Gerar URL OAuth
         auth_response = supabase.auth.sign_in_with_oauth({
