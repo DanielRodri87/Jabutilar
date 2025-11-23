@@ -135,23 +135,39 @@ export default function TelaGrupo() {
   }, [userProfile.image]); // Dependência na imagem atual
 
   // Função para salvar o avatar escolhido
-  const handleSelectAvatar = (avatarUrl) => {
-    // 1. Atualizar estado visual imediato
+  const handleSelectAvatar = async (avatarUrl) => {
+    // 1. Atualizar estado visual imediato (Feedback Rápido)
     setUserProfile(prev => ({ ...prev, image: avatarUrl }));
     setShowAvatarModal(false);
 
-    // 2. Persistir localmente e (idealmente) no backend
     try {
+        // 2. Persistir localmente
         const extra = JSON.parse(sessionStorage.getItem('user_extra') || '{}');
         extra.image = avatarUrl;
-        sessionStorage.setItem('user_extra', JSON.stringify(extra));
-        localStorage.setItem('user_extra', JSON.stringify(extra));
         
-        console.log("Avatar atualizado para:", avatarUrl);
-        // Aqui você poderia adicionar uma chamada fetch para salvar no banco:
-        // await fetch(`${API_URL}/usuario/${userIdDebug}`, { method: 'PATCH', body: JSON.stringify({ profile_image: avatarUrl }) ... });
+        const extraString = JSON.stringify(extra);
+        sessionStorage.setItem('user_extra', extraString);
+        localStorage.setItem('user_extra', extraString);
+        
+        // 3. SALVAR NO BACKEND (A Correção Principal)
+        if (userIdDebug) {
+            const response = await fetch(`${API_URL}/usuario/${userIdDebug}/avatar`, {
+                method: 'PATCH', // Usando PATCH pois é uma atualização parcial
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ image: avatarUrl })
+            });
+
+            if (!response.ok) {
+                console.error("Erro ao salvar avatar no servidor:", await response.text());
+            } else {
+                console.log("Avatar salvo com sucesso no banco de dados.");
+            }
+        }
+
     } catch (e) {
-        console.error("Erro ao salvar preferência de avatar", e);
+        console.error("Erro ao processar a escolha do avatar", e);
     }
   };
 
