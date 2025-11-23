@@ -20,13 +20,13 @@ export default function TelaGrupo() {
 
   // Dashboard
   const [contas, setContas] = useState([
-    { id: 1, nome: 'Energia', valor: 0, cor: '#F59E0B' },
-    { id: 2, nome: 'Água', valor: 0, cor: '#3B82F6' },
+    { id: 1, nome: 'Energia', valor: 0, cor: '#E4A87B' },
+    { id: 2, nome: 'Água', valor: 0, cor: '#A0BF9F' },
     { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },
-    { id: 4, nome: 'Aluguel', valor: 0, cor: '#EF4444' },
+    { id: 4, nome: 'Aluguel', valor: 0, cor: '#92B6E4' },
     { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },
     { id: 7, nome: 'Limpeza', valor: 0, cor: '#EC4899' },
-    { id: 6, nome: 'Outros', valor: 0, cor: '#9CA3AF' },
+    { id: 6, nome: 'Outros', valor: 0, cor: '#9BBFC0' },
   ]);
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
 
