@@ -7,6 +7,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# CORREÇÃO: Nome da tabela em minúsculo para corresponder ao banco de dados
+TABLE_NAME = "itemcompras_data"
+
 def criar_item_compra(item: ItemCompraCreate):
     """Criar um novo item de compra"""
     try:
@@ -21,10 +24,11 @@ def criar_item_compra(item: ItemCompraCreate):
             "update_at": datetime.now().isoformat()
         }
         
-        response = supabase.table("itemCompras_data").insert(data).execute()
+        # Usa a constante TABLE_NAME corrigida
+        response = supabase.table(TABLE_NAME).insert(data).execute()
         
         if not response.data:
-            # Erro de negócio (esperado no teste de falha 400)
+            # Erro de negócio
             raise HTTPException(status_code=400, detail="Erro ao criar item de compra")
         
         return {
@@ -32,10 +36,8 @@ def criar_item_compra(item: ItemCompraCreate):
             "data": response.data[0]
         }
     except HTTPException:
-        # Propaga a HTTPException (400)
         raise
     except Exception as e:
-        # Captura erros inesperados (rede, DB, etc.) e os trata como 500
         logger.error(f"Erro ao criar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -45,7 +47,7 @@ def criar_item_compra(item: ItemCompraCreate):
 def listar_itens_compra(id_list: int = None):
     """Listar todos os itens de compra ou filtrar por id_list"""
     try:
-        query = supabase.table("itemCompras_data").select("*")
+        query = supabase.table(TABLE_NAME).select("*")
         
         if id_list is not None:
             query = query.eq("id_list", id_list)
@@ -56,11 +58,7 @@ def listar_itens_compra(id_list: int = None):
             "message": "Itens de compra recuperados com sucesso",
             "data": response.data
         }
-    except HTTPException:
-        # Propaga HTTPException (se alguma for levantada por Query params inválidos, embora improvável aqui)
-        raise
     except Exception as e:
-        # Captura erros inesperados
         logger.error(f"Erro ao listar itens de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -70,7 +68,7 @@ def listar_itens_compra(id_list: int = None):
 def obter_item_compra(item_id: int):
     """Obter um item de compra específico por ID"""
     try:
-        response = supabase.table("itemCompras_data").select("*").eq("id", item_id).execute()
+        response = supabase.table(TABLE_NAME).select("*").eq("id", item_id).execute()
         
         if not response.data:
             raise HTTPException(status_code=404, detail="Item de compra não encontrado")
@@ -80,10 +78,8 @@ def obter_item_compra(item_id: int):
             "data": response.data[0]
         }
     except HTTPException:
-        # Propaga a HTTPException (404)
         raise
     except Exception as e:
-        # Captura erros inesperados
         logger.error(f"Erro ao obter item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -94,12 +90,12 @@ def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
     """Atualizar um item de compra existente"""
     try:
         # Verificar se o item existe
-        check = supabase.table("itemCompras_data").select("id").eq("id", item_id).execute()
+        check = supabase.table(TABLE_NAME).select("id").eq("id", item_id).execute()
         
         if not check.data:
             raise HTTPException(status_code=404, detail="Item de compra não encontrado")
         
-        # Preparar dados para atualização (apenas campos não nulos)
+        # Preparar dados para atualização
         data = {}
         if item.nome is not None:
             data["nome"] = item.nome
@@ -116,10 +112,9 @@ def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
         
         data["update_at"] = datetime.now().isoformat()
         
-        response = supabase.table("itemCompras_data").update(data).eq("id", item_id).execute()
+        response = supabase.table(TABLE_NAME).update(data).eq("id", item_id).execute()
         
         if not response.data:
-            # Erro de negócio (esperado no teste de falha 400)
             raise HTTPException(status_code=400, detail="Erro ao atualizar item de compra")
         
         return {
@@ -127,10 +122,8 @@ def atualizar_item_compra(item_id: int, item: ItemCompraUpdate):
             "data": response.data[0]
         }
     except HTTPException:
-        # Propaga a HTTPException (404 ou 400)
         raise
     except Exception as e:
-        # Captura erros inesperados
         logger.error(f"Erro ao atualizar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -141,22 +134,20 @@ def deletar_item_compra(item_id: int):
     """Deletar um item de compra"""
     try:
         # Verificar se o item existe
-        check = supabase.table("itemCompras_data").select("id").eq("id", item_id).execute()
+        check = supabase.table(TABLE_NAME).select("id").eq("id", item_id).execute()
         
         if not check.data:
             raise HTTPException(status_code=404, detail="Item de compra não encontrado")
         
-        response = supabase.table("itemCompras_data").delete().eq("id", item_id).execute()
+        response = supabase.table(TABLE_NAME).delete().eq("id", item_id).execute()
         
         return {
             "message": "Item de compra deletado com sucesso",
             "data": response.data
         }
     except HTTPException:
-        # Propaga a HTTPException (404)
         raise
     except Exception as e:
-        # Captura erros inesperados
         logger.error(f"Erro ao deletar item de compra: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -166,7 +157,7 @@ def deletar_item_compra(item_id: int):
 def marcar_como_comprado(item_id: int, comprado: bool = True):
     """Marcar ou desmarcar um item como comprado"""
     try:
-        check = supabase.table("itemCompras_data").select("id").eq("id", item_id).execute()
+        check = supabase.table(TABLE_NAME).select("id").eq("id", item_id).execute()
         
         if not check.data:
             raise HTTPException(status_code=404, detail="Item de compra não encontrado")
@@ -176,10 +167,9 @@ def marcar_como_comprado(item_id: int, comprado: bool = True):
             "update_at": datetime.now().isoformat()
         }
         
-        response = supabase.table("itemCompras_data").update(data).eq("id", item_id).execute()
+        response = supabase.table(TABLE_NAME).update(data).eq("id", item_id).execute()
         
         if not response.data:
-            # Erro de negócio (esperado no teste de falha 400)
             raise HTTPException(status_code=400, detail="Erro ao atualizar status do item")
         
         return {
@@ -187,10 +177,8 @@ def marcar_como_comprado(item_id: int, comprado: bool = True):
             "data": response.data[0]
         }
     except HTTPException:
-        # Propaga a HTTPException (404 ou 400)
         raise
     except Exception as e:
-        # Captura erros inesperados
         logger.error(f"Erro ao atualizar status do item: {str(e)}")
         raise HTTPException(
             status_code=500,
