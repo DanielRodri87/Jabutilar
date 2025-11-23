@@ -101,7 +101,7 @@ export default function TelaGrupo() {
 
   useEffect(() => {
     if (selectedGroup && selectedGroup.id) {
-      fetchTarefas();
+      fetchTarefas(selectedGroup.id);          // << usar id do grupo
       fetchCompras(selectedGroup.id);
       fetchContas(selectedGroup.id);
     }
@@ -171,12 +171,20 @@ export default function TelaGrupo() {
     }
   };
 
-  const fetchTarefas = async () => {
+  const fetchTarefas = async (groupId) => {
     try {
-      const res = await fetch(`${API_URL}/tarefa`);
+      // filtra tarefas pelo grupo atual
+      const res = await fetch(`${API_URL}/tarefa?id_group=${groupId}`);
       const data = await res.json();
       if (data.data) {
-        const mapped = data.data.map(t => ({
+        // filtro de segurança no frontend caso o backend ainda retorne outras tarefas
+        const onlyCurrentGroup = data.data.filter(t => {
+          // o backend salva em group_id; alguns clients antigos podem ter grupo_id
+          const gid = t.group_id ?? t.grupo_id;
+          return Number(gid) === Number(groupId);
+        });
+
+        const mapped = onlyCurrentGroup.map(t => ({
           id: t.id,
           descricao: t.titulo,
           status: t.status ? 'Concluída' : 'Não começou',
@@ -187,6 +195,8 @@ export default function TelaGrupo() {
           editing: false
         }));
         setTarefas(mapped);
+      } else {
+        setTarefas([]);
       }
     } catch (e) { console.error("Erro tarefas", e); }
   };
@@ -289,7 +299,8 @@ export default function TelaGrupo() {
             prioridade: mapPriorityToInt(task.prioridade),
             status: true,
             recorrente: false,
-            responsavel: 1
+            responsavel: 1,
+            grupo_id: Number(selectedGroup.id)   // garantir vínculo ao marcar concluída
           })
         });
       } catch(e) { console.error(e); }
@@ -372,7 +383,8 @@ export default function TelaGrupo() {
           prioridade: 2,
           status: false,
           recorrente: false,
-          responsavel: 1
+          responsavel: 1,
+          grupo_id: Number(selectedGroup.id)      // << referenciar grupo
         })
       });
       const data = await res.json();
@@ -409,7 +421,8 @@ export default function TelaGrupo() {
         prioridade: mapPriorityToInt(t.prioridade),
         status: t.checked,
         recorrente: false,
-        responsavel: 1
+        responsavel: 1,
+        grupo_id: Number(selectedGroup.id)      // << manter vínculo ao atualizar
       })
     });
   };
@@ -452,7 +465,7 @@ export default function TelaGrupo() {
   const saveCompra = async (id) => {
     const c = compras.find(x => x.id === id);
     if (!c) return;
-    setCompras(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+    setCompras(prev => prev.map (item => item.id === id ? { ...item, editing: false } : item));
     setEditingCompra(null);
     await fetch(`${API_URL}/itens-compra/${id}`, {
       method: 'PUT',
@@ -1489,7 +1502,6 @@ export default function TelaGrupo() {
           </div>
         </div>
       )}
-
       {/* POPUP: CÓDIGO */}
       {showInviteCode && (
         <div className="overlay" onClick={closePopups}>

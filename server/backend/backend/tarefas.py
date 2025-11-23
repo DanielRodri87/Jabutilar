@@ -18,6 +18,7 @@ def criar_tarefa(task: TarefasBase):
             "status": task.status,
             "recorrente": task.recorrente,
             "responsavel": task.responsavel,
+            "group_id": task.grupo_id,  # usa coluna group_id na tabela
             "created_at": datetime.now().isoformat(),
             "update_at": datetime.now().isoformat()
         }
@@ -48,8 +49,14 @@ def listar_tarefas(skip: int = 0, limit: int = 100, filtros: dict = None):
     try:
         query = supabase.table("task_data").select("*")
         
-        # Aplicar filtros se fornecidos
+        # Normalizar filtro vindo da query (?id_group=)
         if filtros:
+            # se vier id_group do endpoint, converte para coluna group_id
+            if "id_group" in filtros and filtros["id_group"] is not None:
+                try:
+                    filtros["group_id"] = int(filtros.pop("id_group"))
+                except ValueError:
+                    filtros.pop("id_group", None)
             for key, value in filtros.items():
                 if value is not None:
                     query = query.eq(key, value)
@@ -105,6 +112,7 @@ def atualizar_tarefa(tarefa_id: int, task: TarefasBase):
             "status": task.status,
             "recorrente": task.recorrente,
             "responsavel": task.responsavel,
+            "group_id": task.grupo_id,  # manter vínculo com group_id
             "update_at": datetime.now().isoformat()
         }
         
@@ -146,3 +154,4 @@ def excluir_tarefa(tarefa_id: int):
             status_code=500,
             detail=f"Erro inesperado ao excluir tarefa: {str(e)}"
         )
+

@@ -66,6 +66,7 @@ class TarefasBase(BaseModel):
     status: Optional[bool]
     recorrente: Optional[bool]
     responsavel: int
+    grupo_id: int                    # << novo campo para vincular ao grupo
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None
 
