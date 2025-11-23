@@ -80,15 +80,23 @@ def get_oauth_url(provider: str, redirect_uri: str = None):
         if provider not in ['google', 'facebook', 'apple']:
             raise HTTPException(status_code=400, detail=f"Provider '{provider}' não suportado")
         
+        # --- CORREÇÃO: URL dinâmica baseada no provider ---
         if not redirect_uri:
-            redirect_uri = "http://localhost:3000/auth/facebook/callback"
+            # Se for google, redireciona para /auth/google/callback
+            # Se for facebook, redireciona para /auth/facebook/callback
+            redirect_uri = f"http://localhost:3000/auth/{provider}/callback"
         
         # Opções Padrão
         options = {
             "redirect_to": redirect_uri,
-            "scopes": "public_profile email" 
         }
         
+        # Escopos específicos
+        if provider == 'facebook':
+            options["scopes"] = "public_profile email"
+        elif provider == 'google':
+            options["scopes"] = "email profile" # Escopos padrão do Google
+
         auth_response = supabase.auth.sign_in_with_oauth({
             "provider": provider,
             "options": options
@@ -96,11 +104,6 @@ def get_oauth_url(provider: str, redirect_uri: str = None):
         
         url_gerada = auth_response.url if hasattr(auth_response, 'url') else None
         
-        # --- Hack para garantir compatibilidade com Facebook ---
-        if provider == 'facebook' and url_gerada:
-             # Se necessário, limpamos scopes duplicados, mas agora com Dev Mode deve funcionar direto
-             pass
-
         logger.info(f"URL GERADA ({provider}): {url_gerada}")
 
         return {
