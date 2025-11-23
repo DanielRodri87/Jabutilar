@@ -101,15 +101,31 @@ export default function TelaGrupo() {
 
   useEffect(() => {
     if (selectedGroup && selectedGroup.id) {
-      fetchTarefas(selectedGroup.id);          // << usar id do grupo
+      // sempre que o grupo muda, zera listas antigas para não "vazar" dados
+      setTarefas([]);
+      setCompras([]);
+      setContasDetalhadas([]);
+      // zera o dashboard imediatamente
+      calcularDashboard();
+
+      fetchTarefas(selectedGroup.id);
       fetchCompras(selectedGroup.id);
       fetchContas(selectedGroup.id);
+    } else {
+      // se não houver grupo selecionado, limpa tudo
+      setTarefas([]);
+      setCompras([]);
+      setContasDetalhadas([]);
+      // zera dashboard quando não há grupo
+      calcularDashboard();
     }
   }, [selectedGroup]);
 
+  // recalcular dashboard quando listas mudarem OU quando o grupo mudar
   useEffect(() => {
+    if (!selectedGroup) return;
     calcularDashboard();
-  }, [compras, contasDetalhadas]);
+  }, [compras, contasDetalhadas, selectedGroup]);
 
   // ================== DETECÇÃO DE LOGIN SOCIAL / AVATAR (NOVO) ==================
   useEffect(() => {
@@ -599,15 +615,38 @@ export default function TelaGrupo() {
            if(!uRes.ok) { setInitialLoading(false); return; }
            const uData = await uRes.json();
            const gid = (uData.data || uData).id_group;
-           if(!gid) { setShowCreateGroup(true); setInitialLoading(false); return; }
+           if(!gid) { 
+             setShowCreateGroup(true); 
+             // novo usuário sem grupo: limpa dados
+             setGroups([]);
+             setSelectedGroup(null);
+             setTarefas([]);
+             setCompras([]);
+             setContasDetalhadas([]);
+             // zera dashboard para o novo usuário
+             calcularDashboard();
+             setInitialLoading(false); 
+             return; 
+           }
            const gRes = await fetch(`${API_URL}/grupo/${gid}`);
            const gData = await gRes.json();
            if(gData.data) {
                const g = { id: gData.data.id, name: gData.data.nome, icon: '/planta.png' };
-               setGroups([g]); setSelectedGroup(g); setShowCreateGroup(false);
+               setGroups([g]); 
+               setSelectedGroup(g);
+               // ao trocar de grupo via backend (outro usuário/conta), zera as listas
+               setTarefas([]);
+               setCompras([]);
+               setContasDetalhadas([]);
+               // zera dashboard para não mostrar dados do usuário anterior
+               calcularDashboard();
+               setShowCreateGroup(false);
            }
            setInitialLoading(false);
-       } catch(e) { console.error(e); setInitialLoading(false); }
+       } catch(e) { 
+         console.error(e); 
+         setInitialLoading(false); 
+       }
     };
     loadGroup();
   }, [userIdDebug]);

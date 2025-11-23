@@ -37,7 +37,6 @@ def criar_tarefa(task: TarefasBase):
         # Propaga a HTTPException (400)
         raise
     except Exception as e:
-        # Captura erros inesperados (rede, DB, etc.) e os trata como 500
         logger.error(f"Erro ao criar Tarefa: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -49,15 +48,18 @@ def listar_tarefas(skip: int = 0, limit: int = 100, filtros: dict = None):
     try:
         query = supabase.table("task_data").select("*")
         
-        # Normalizar filtro vindo da query (?id_group=)
+        # Normalizar filtro vindo da rota (?id_group=)
         if filtros:
+            # garantir que estamos trabalhando com um dict simples
+            filtros_norm = dict(filtros)
             # se vier id_group do endpoint, converte para coluna group_id
-            if "id_group" in filtros and filtros["id_group"] is not None:
+            if "id_group" in filtros_norm and filtros_norm["id_group"] is not None:
                 try:
-                    filtros["group_id"] = int(filtros.pop("id_group"))
-                except ValueError:
-                    filtros.pop("id_group", None)
-            for key, value in filtros.items():
+                    filtros_norm["group_id"] = int(filtros_norm.pop("id_group"))
+                except (ValueError, TypeError):
+                    filtros_norm.pop("id_group", None)
+            # aplicar todos os filtros normalizados
+            for key, value in filtros_norm.items():
                 if value is not None:
                     query = query.eq(key, value)
         
