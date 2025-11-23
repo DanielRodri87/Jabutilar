@@ -33,7 +33,13 @@ export default function TelaGrupo() {
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
 
-  // === REDIMENSIONAMENTO DE COLUNAS (Ajustado para Qtd em Compras) ===
+  // === ESTADOS DO PERFIL E AVATAR (MODIFICADO) ===
+  const [userIdDebug, setUserIdDebug] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState({ name: 'Jabuti de lago', image: '/p1.png' });
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+
+  // === REDIMENSIONAMENTO DE COLUNAS ===
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
     compras: [50, 200, 110, 60, 100, 110, 70], // Check, Prod, Tipo, Qtd, Valor, Prio, Resp
@@ -105,6 +111,50 @@ export default function TelaGrupo() {
     calcularDashboard();
   }, [compras, contasDetalhadas]);
 
+  // ================== DETECÇÃO DE LOGIN SOCIAL / AVATAR (NOVO) ==================
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Verificar se deve mostrar o seletor de perfil (vindo do callback do Facebook ou flag de URL)
+    const params = new URLSearchParams(window.location.search);
+    const isNew = params.get('new') === 'true';
+    const storageShow = sessionStorage.getItem('show_profile_selector') === 'true';
+    
+    // Se for novo login OU se a imagem atual for a padrão genérica
+    if (isNew || storageShow || (userProfile.image === '/fotodeperfil.png')) {
+        setShowAvatarModal(true);
+        // Limpar a flag para não mostrar novamente no refresh
+        sessionStorage.removeItem('show_profile_selector');
+        
+        // Limpar a query string 'new=true' da URL sem recarregar a página
+        if (isNew) {
+            const newUrl = window.location.pathname + window.location.search.replace(/[\?&]new=true/, '');
+            window.history.replaceState({}, '', newUrl);
+        }
+    }
+  }, [userProfile.image]); // Dependência na imagem atual
+
+  // Função para salvar o avatar escolhido
+  const handleSelectAvatar = (avatarUrl) => {
+    // 1. Atualizar estado visual imediato
+    setUserProfile(prev => ({ ...prev, image: avatarUrl }));
+    setShowAvatarModal(false);
+
+    // 2. Persistir localmente e (idealmente) no backend
+    try {
+        const extra = JSON.parse(sessionStorage.getItem('user_extra') || '{}');
+        extra.image = avatarUrl;
+        sessionStorage.setItem('user_extra', JSON.stringify(extra));
+        localStorage.setItem('user_extra', JSON.stringify(extra));
+        
+        console.log("Avatar atualizado para:", avatarUrl);
+        // Aqui você poderia adicionar uma chamada fetch para salvar no banco:
+        // await fetch(`${API_URL}/usuario/${userIdDebug}`, { method: 'PATCH', body: JSON.stringify({ profile_image: avatarUrl }) ... });
+    } catch (e) {
+        console.error("Erro ao salvar preferência de avatar", e);
+    }
+  };
+
   const fetchTarefas = async () => {
     try {
       const res = await fetch(`${API_URL}/tarefa`);
@@ -135,7 +185,7 @@ export default function TelaGrupo() {
           produto: c.nome,
           tipo: c.categoria || 'Outros',
           valor: c.preco,
-          quantidade: c.quantidade || 1, // Quantidade vinda do backend
+          quantidade: c.quantidade || 1, 
           checked: c.comprado,
           prioridade: 'Média',
           responsavel: '/p1.png',
@@ -495,10 +545,6 @@ export default function TelaGrupo() {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [editName, setEditName] = useState('');
   
-  const [userIdDebug, setUserIdDebug] = useState(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState({ name: 'Jabuti de lago', image: '/p1.png' });
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -507,7 +553,12 @@ export default function TelaGrupo() {
     setUserIdDebug(uid);
     try {
        const extra = JSON.parse(sessionStorage.getItem('user_extra') || localStorage.getItem('user_extra') || '{}');
-       if(extra.name) setUserProfile({name: extra.name, image: extra.image || '/p1.png'});
+       // Se tiver name/image, usa. Se não, usa defaults.
+       setUserProfile(prev => ({
+           ...prev,
+           name: extra.name || prev.name,
+           image: extra.image || prev.image
+       }));
     } catch(e){}
   }, []);
 
@@ -806,6 +857,32 @@ export default function TelaGrupo() {
         .context-item.danger{color:#dc2626;}
         .context-item.danger:hover{background:#fee2e2;}
         .context-item svg{width:16px;height:16px;}
+
+        /* CSS DO MODAL DE AVATAR */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+            justify-items: center;
+        }
+        .avatar-option {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            object-fit: cover;
+        }
+        .avatar-option:hover {
+            transform: scale(1.1);
+            border-color: #C1D9C1;
+        }
+        .avatar-option.selected {
+            border-color: #667467;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
       `}</style>
 
       <div className="container">
@@ -1416,6 +1493,40 @@ export default function TelaGrupo() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* POPUP: SELEÇÃO DE AVATAR (NOVO) */}
+      {showAvatarModal && (
+        <div className="overlay" style={{zIndex: 10001}}>
+            <div className="popup-card" style={{maxWidth: '500px', textAlign: 'center'}}>
+                <h2 className="popup-title">Bem-vindo(a) ao JabutiLar! 🐢</h2>
+                <p style={{color: '#666', marginBottom: '20px'}}>
+                    Para começar, escolha um avatar que combine com você.
+                </p>
+                
+                <div className="avatar-grid">
+                    {/* Usando os assets existentes na pasta public */}
+                    <img src="/p1.png" className={`avatar-option ${userProfile.image === '/p1.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p1.png')} />
+                    <img src="/p2.png" className={`avatar-option ${userProfile.image === '/p2.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p2.png')} />
+                    <img src="/p3.png" className={`avatar-option ${userProfile.image === '/p3.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p3.png')} />
+                    <img src="/p4.png" className={`avatar-option ${userProfile.image === '/p4.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p4.png')} />
+                    
+                    {/* Opções extras (repetidas para exemplo de grade) */}
+                    <img src="/p1.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p1.png')} />
+                    <img src="/p2.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p2.png')} />
+                    <img src="/p3.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p3.png')} />
+                    <img src="/p4.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p4.png')} />
+                </div>
+                
+                <button 
+                    className="submitButton" 
+                    style={{marginTop: '30px'}}
+                    onClick={() => handleSelectAvatar(userProfile.image)}
+                >
+                    <span>Confirmar Escolha</span>
+                </button>
+            </div>
         </div>
       )}
 
