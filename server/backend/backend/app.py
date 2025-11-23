@@ -12,9 +12,10 @@ from .schemas import (
     TarefasBase,
     GrupoBase,
     ContasBase,
-    SocialAuthRequest
+    SocialAuthRequest,
+    AvatarUpdate
 )
-from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario
+from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario, atualizar_avatar_usuario
 from .social_auth import get_oauth_url, login_social 
 
 from .item_compra import (
@@ -74,6 +75,10 @@ app.add_middleware(
 def cadastro(req: CadastroRequest):
     """Cadastrar um novo usuário"""
     return cadastrar_usuario(req)
+
+@app.patch("/usuario/{id_user}/avatar")
+def update_avatar(id_user: str, req: AvatarUpdate):
+    return atualizar_avatar_usuario(id_user, req)
 
 @app.post("/", tags=["Autenticação"])
 def login(req: LoginRequest):

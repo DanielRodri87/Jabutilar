@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from .database import supabase
-from .schemas import CadastroRequest, LoginRequest
+from .schemas import CadastroRequest, LoginRequest, AvatarUpdate
 from supabase_auth.errors import AuthApiError
 import logging
 
@@ -205,4 +205,25 @@ def obter_usuario(id_user: str):
         raise
     except Exception as e:
         logger.error(f"Erro ao obter usuário: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def atualizar_avatar_usuario(id_user: str, req: AvatarUpdate):
+    try:
+        logger.info(f"Atualizando avatar do usuário ID: {id_user} para {req.image}")
+        
+        response = (
+            supabase
+            .table("user_data")
+            .update({"image": req.image})
+            .eq("id_auth", id_user)
+            .execute()
+        )
+
+        return {
+            "message": "Avatar atualizado com sucesso",
+            "updated_data": response.data
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar avatar: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -13,6 +13,9 @@ class CadastroRequest(BaseModel):
     profile_image: Optional[str] = "/fotodeperfil.png"
     id_group: Optional[int] = None
 
+class AvatarUpdate(BaseModel):
+    image: str
+
 class LoginRequest(BaseModel):
     email: str
     senha: str
