@@ -6,36 +6,37 @@ import {
   FiTag, FiDollarSign, FiChevronDown
 } from 'react-icons/fi';
 
+const API_URL = 'http://localhost:8000';
+
 export default function TelaGrupo() {
+  // ================= ESTADOS GERAIS =================
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
+  // Listas de dados
   const [tarefas, setTarefas] = useState([]);
   const [compras, setCompras] = useState([]);
-  
-  // NOVO: lista de contas detalhadas (do backend, baseada em ContasBase)
   const [contasDetalhadas, setContasDetalhadas] = useState([]);
 
-  // DASHBOARD FIXO: Categorias fixas conforme solicitado
+  // Dashboard
   const [contas, setContas] = useState([
-    { id: 1, nome: 'Energia', valor: 0, cor: '#F59E0B' },      // Laranja
-    { id: 2, nome: 'Água', valor: 0, cor: '#3B82F6' },         // Azul
-    { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },     // Roxo
-    { id: 4, nome: 'Aluguel', valor: 0, cor: '#EF4444' },      // Vermelho
-    { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },  // Verde
-    { id: 7, nome: 'Limpeza', valor: 0, cor: '#EC4899' },     // Rosa
-    { id: 6, nome: 'Outros', valor: 0, cor: '#9CA3AF' },       // Cinza
+    { id: 1, nome: 'Energia', valor: 0, cor: '#F59E0B' },
+    { id: 2, nome: 'Água', valor: 0, cor: '#3B82F6' },
+    { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },
+    { id: 4, nome: 'Aluguel', valor: 0, cor: '#EF4444' },
+    { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },
+    { id: 7, nome: 'Limpeza', valor: 0, cor: '#EC4899' },
+    { id: 6, nome: 'Outros', valor: 0, cor: '#9CA3AF' },
   ]);
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
 
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
 
-  // === REDIMENSIONAMENTO SUAVE E CONFINADO ===
+  // === REDIMENSIONAMENTO DE COLUNAS (Ajustado para Qtd em Compras) ===
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
-    compras: [50, 220, 110, 100, 110, 70],
-    // colunas da lista de contas (Pago?, Descrição, Categoria, Valor, Vencimento, Recorrente?, Responsável)
+    compras: [50, 200, 110, 60, 100, 110, 70], // Check, Prod, Tipo, Qtd, Valor, Prio, Resp
     contas:  [50, 220, 130, 100, 120, 120, 70],
   });
   const isResizing = useRef(null);
@@ -70,7 +71,6 @@ export default function TelaGrupo() {
         }));
       });
     };
-
     const handlePointerUp = () => {
       if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
       isResizing.current = null;
@@ -78,7 +78,6 @@ export default function TelaGrupo() {
       document.body.style.userSelect = '';
       document.body.style.pointerEvents = '';
     };
-
     document.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('pointerup', handlePointerUp);
     return () => {
@@ -92,32 +91,394 @@ export default function TelaGrupo() {
   const [removingCompraId, setRemovingCompraId] = useState(null);
   const [removingContaId, setRemovingContaId] = useState(null);
 
-  const handleTaskCheck = (taskId) => {
-    setRemovingTaskId(taskId);
-    setTimeout(() => {
-      setTarefas(prev => prev.filter(t => t.id !== taskId));
-      setRemovingTaskId(null);
-    }, 280);
+  // ================== FETCH DE DADOS ==================
+
+  useEffect(() => {
+    if (selectedGroup && selectedGroup.id) {
+      fetchTarefas();
+      fetchCompras(selectedGroup.id);
+      fetchContas(selectedGroup.id);
+    }
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    calcularDashboard();
+  }, [compras, contasDetalhadas]);
+
+  const fetchTarefas = async () => {
+    try {
+      const res = await fetch(`${API_URL}/tarefa`);
+      const data = await res.json();
+      if (data.data) {
+        const mapped = data.data.map(t => ({
+          id: t.id,
+          descricao: t.titulo,
+          status: t.status ? 'Concluída' : 'Não começou',
+          checked: t.status,
+          prioridade: mapPriorityToString(t.prioridade),
+          data: t.datavencimento,
+          responsavel: '/p1.png',
+          editing: false
+        }));
+        setTarefas(mapped);
+      }
+    } catch (e) { console.error("Erro tarefas", e); }
   };
 
-  const handleCompraCheck = (compraId) => {
-    setRemovingCompraId(compraId);
-    setTimeout(() => {
-      setCompras(prev => prev.filter(c => c.id !== compraId));
-      setRemovingCompraId(null);
-    }, 280);
+  const fetchCompras = async (groupId) => {
+    try {
+      const res = await fetch(`${API_URL}/itens-compra?id_list=${groupId}`);
+      const data = await res.json();
+      if (data.data) {
+        const mapped = data.data.map(c => ({
+          id: c.id,
+          produto: c.nome,
+          tipo: c.categoria || 'Outros',
+          valor: c.preco,
+          quantidade: c.quantidade || 1, // Quantidade vinda do backend
+          checked: c.comprado,
+          prioridade: 'Média',
+          responsavel: '/p1.png',
+          editing: false
+        }));
+        setCompras(mapped);
+      }
+    } catch (e) { console.error("Erro compras", e); }
   };
 
-  // Marcar conta como paga (remoção suave)
-  const handleContaCheck = (contaId) => {
-    setRemovingContaId(contaId);
-    setTimeout(() => {
-      setContasDetalhadas(prev => prev.filter(c => c.id !== contaId));
-      setRemovingContaId(null);
-    }, 280);
+  const fetchContas = async (groupId) => {
+    try {
+      const res = await fetch(`${API_URL}/conta/${groupId}`);
+      const data = await res.json();
+      if (data.data) {
+        const mapped = data.data.map(c => ({
+          id: c.id,
+          descricao: c.descricao,
+          valor: c.valor,
+          datavencimento: c.datavenc,
+          status: c.status,
+          categoria: c.categoria,
+          recorrente: c.recorrente,
+          responsavel: '/p1.png',
+          editing: false
+        }));
+        setContasDetalhadas(mapped);
+      }
+    } catch (e) { console.error("Erro contas", e); }
   };
 
-  // === POPUPS PRINCIPAIS ===
+  // ================== LÓGICA DO DASHBOARD ==================
+  const calcularDashboard = () => {
+    const categoriasMap = {
+      'Energia': { id: 1, cor: '#F59E0B', valor: 0 },
+      'Água': { id: 2, cor: '#3B82F6', valor: 0 },
+      'Internet': { id: 3, cor: '#8B5CF6', valor: 0 },
+      'Aluguel': { id: 4, cor: '#EF4444', valor: 0 },
+      'Alimentação': { id: 5, cor: '#10B981', valor: 0 },
+      'Limpeza': { id: 7, cor: '#EC4899', valor: 0 },
+      'Outros': { id: 6, cor: '#9CA3AF', valor: 0 },
+    };
+
+    // Somar Contas
+    contasDetalhadas.forEach(c => {
+      let cat = c.categoria || 'Outros';
+      if (!categoriasMap[cat]) cat = 'Outros';
+      categoriasMap[cat].valor += Number(c.valor || 0);
+    });
+
+    // Somar Compras (Valor * Quantidade)
+    compras.forEach(c => {
+      let cat = c.tipo || 'Outros';
+      if (cat === 'Comida') cat = 'Alimentação';
+      if (!categoriasMap[cat]) cat = 'Outros';
+      
+      const totalItem = Number(c.valor || 0) * Number(c.quantidade || 1);
+      categoriasMap[cat].valor += totalItem;
+    });
+
+    const novoDashboard = Object.keys(categoriasMap).map(key => ({
+      id: categoriasMap[key].id,
+      nome: key,
+      valor: categoriasMap[key].valor,
+      cor: categoriasMap[key].cor
+    }));
+
+    setContas(novoDashboard);
+  };
+
+  // ================== CHECK & DELETE LOGIC ==================
+
+  const handleTaskCheck = async (task) => {
+    if (!task.checked) {
+      const updatedTask = { ...task, checked: true, status: 'Concluída' };
+      setTarefas(prev => prev.map(t => t.id === task.id ? updatedTask : t));
+      try {
+        await fetch(`${API_URL}/tarefa/${task.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: task.descricao,
+            descricao: task.descricao,
+            datavencimento: task.data,
+            prioridade: mapPriorityToInt(task.prioridade),
+            status: true,
+            recorrente: false,
+            responsavel: 1
+          })
+        });
+      } catch(e) { console.error(e); }
+    } else {
+      setTarefas(prev => prev.map(t => t.id === task.id ? { ...t, checked: false, status: 'Não começou' } : t));
+      setRemovingTaskId(task.id);
+      setTimeout(async () => {
+        try {
+          await fetch(`${API_URL}/tarefa/${task.id}`, { method: 'DELETE' });
+          setTarefas(prev => prev.filter(t => t.id !== task.id));
+        } catch(e) { console.error(e); }
+        setRemovingTaskId(null);
+      }, 500);
+    }
+  };
+
+  const handleCompraCheck = async (compra) => {
+    if (!compra.checked) {
+      setCompras(prev => prev.map(c => c.id === compra.id ? { ...c, checked: true } : c));
+      try {
+        await fetch(`${API_URL}/itens-compra/${compra.id}/comprado?comprado=true`, { method: 'PATCH' });
+      } catch(e) { console.error(e); }
+    } else {
+      setCompras(prev => prev.map(c => c.id === compra.id ? { ...c, checked: false } : c));
+      setRemovingCompraId(compra.id);
+      setTimeout(async () => {
+        try {
+          await fetch(`${API_URL}/itens-compra/${compra.id}`, { method: 'DELETE' });
+          setCompras(prev => prev.filter(c => c.id !== compra.id));
+        } catch(e) { console.error(e); }
+        setRemovingCompraId(null);
+      }, 500);
+    }
+  };
+
+  const handleContaCheck = async (conta) => {
+    if (!conta.status) {
+      setContasDetalhadas(prev => prev.map(c => c.id === conta.id ? { ...c, status: true } : c));
+      try {
+        await fetch(`${API_URL}/conta/${conta.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            descricao: conta.descricao,
+            valor: conta.valor,
+            datavencimento: conta.datavencimento,
+            status: true,
+            categoria: conta.categoria,
+            recorrente: conta.recorrente,
+            resp: 1,
+            grupo_id: Number(selectedGroup.id)
+          })
+        });
+      } catch(e) { console.error(e); }
+    } else {
+      setContasDetalhadas(prev => prev.map(c => c.id === conta.id ? { ...c, status: false } : c));
+      setRemovingContaId(conta.id);
+      setTimeout(async () => {
+        try {
+          await fetch(`${API_URL}/conta/${conta.id}`, { method: 'DELETE' });
+          setContasDetalhadas(prev => prev.filter(c => c.id !== conta.id));
+        } catch(e) { console.error(e); }
+        setRemovingContaId(null);
+      }, 500);
+    }
+  };
+
+  // ================== CRUD CREATE/UPDATE ==================
+
+  const addTask = async () => {
+    if (!selectedGroup) return;
+    try {
+      const res = await fetch(`${API_URL}/tarefa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: 'Nova Tarefa',
+          descricao: 'Nova Tarefa',
+          datavencimento: new Date().toISOString().split('T')[0],
+          prioridade: 2,
+          status: false,
+          recorrente: false,
+          responsavel: 1
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('Erro ao criar tarefa'); return; }
+      if (data.data) {
+        const t = data.data;
+        setTarefas(prev => [...prev, {
+          id: t.id,
+          descricao: t.titulo,
+          status: '',
+          prioridade: 'Média',
+          data: t.datavencimento,
+          responsavel: '/p1.png',
+          editing: true,
+          checked: false
+        }]);
+        setEditingTask(t.id);
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const saveTask = async (id) => {
+    const t = tarefas.find(x => x.id === id);
+    if (!t) return;
+    setTarefas(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+    setEditingTask(null);
+    await fetch(`${API_URL}/tarefa/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo: t.descricao,
+        descricao: t.descricao,
+        datavencimento: t.data,
+        prioridade: mapPriorityToInt(t.prioridade),
+        status: t.checked,
+        recorrente: false,
+        responsavel: 1
+      })
+    });
+  };
+
+  const addCompra = async () => {
+    if (!selectedGroup) return;
+    try {
+      const res = await fetch(`${API_URL}/itens-compra`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: 'Novo Item',
+          quantidade: 1,
+          preco: 0,
+          categoria: 'Outros',
+          comprado: false,
+          id_list: Number(selectedGroup.id)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(`Erro: ${data.detail}`); return; }
+      if (data.data) {
+        const c = data.data;
+        setCompras(prev => [...prev, {
+          id: c.id,
+          produto: c.nome,
+          tipo: 'Outros',
+          prioridade: 'Média',
+          valor: 0,
+          quantidade: 1,
+          responsavel: '/p1.png',
+          editing: true,
+          checked: false
+        }]);
+        setEditingCompra(c.id);
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const saveCompra = async (id) => {
+    const c = compras.find(x => x.id === id);
+    if (!c) return;
+    setCompras(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+    setEditingCompra(null);
+    await fetch(`${API_URL}/itens-compra/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: c.produto,
+        quantidade: Number(c.quantidade || 1),
+        preco: Number(c.valor || 0),
+        categoria: c.tipo,
+        comprado: c.checked,
+        id_list: Number(selectedGroup.id)
+      })
+    });
+  };
+
+  const addContaDetalhada = async () => {
+    if (!selectedGroup) return;
+    try {
+      const res = await fetch(`${API_URL}/conta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          descricao: 'Nova Conta',
+          valor: 0,
+          datavencimento: new Date().toISOString().split('T')[0],
+          status: false,
+          categoria: 'Outros',
+          recorrente: false,
+          resp: 1,
+          grupo_id: Number(selectedGroup.id)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(`Erro: ${data.detail}`); return; }
+      if (data.data) {
+        const c = data.data;
+        setContasDetalhadas(prev => [...prev, {
+          id: c.id,
+          status: false,
+          descricao: c.descricao,
+          categoria: 'Outros',
+          valor: 0,
+          datavencimento: c.datavenc,
+          recorrente: false,
+          responsavel: '/p1.png',
+          editing: true
+        }]);
+        setEditingConta(c.id);
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const saveContaDetalhada = async (id) => {
+    const c = contasDetalhadas.find(x => x.id === id);
+    if (!c) return;
+    setContasDetalhadas(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+    setEditingConta(null);
+    await fetch(`${API_URL}/conta/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        descricao: c.descricao,
+        valor: c.valor,
+        datavencimento: c.datavencimento,
+        status: c.status,
+        categoria: c.categoria,
+        recorrente: c.recorrente,
+        resp: 1,
+        grupo_id: Number(selectedGroup.id)
+      })
+    });
+  };
+
+  const deleteTask = async (id) => {
+    await fetch(`${API_URL}/tarefa/${id}`, { method: 'DELETE' });
+    setTarefas(prev => prev.filter(t => t.id !== id));
+  };
+  const deleteCompra = async (id) => {
+    await fetch(`${API_URL}/itens-compra/${id}`, { method: 'DELETE' });
+    setCompras(prev => prev.filter(c => c.id !== id));
+  };
+  const deleteContaDetalhada = async (id) => {
+    await fetch(`${API_URL}/conta/${id}`, { method: 'DELETE' });
+    setContasDetalhadas(prev => prev.filter(c => c.id !== id));
+  };
+
+  // ================== UTILS E ESTADOS DE UI ==================
+
+  const mapPriorityToString = (p) => (p === 3 ? 'Alta' : p === 1 ? 'Baixa' : 'Média');
+  const mapPriorityToInt = (s) => (s === 'Alta' ? 3 : s === 'Baixa' ? 1 : 2);
+  const formatCurrency = (v) => (v || v === 0 ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+
   const [showCreateGroup, setShowCreateGroup] = useState(true);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -126,535 +487,108 @@ export default function TelaGrupo() {
   const [generatedCode, setGeneratedCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // === EDIÇÃO INLINE ===
   const [editingTask, setEditingTask] = useState(null);
   const [editingCompra, setEditingCompra] = useState(null);
-  const [editingConta, setEditingConta] = useState(null); // NOVO: para editar conta detalhada
+  const [editingConta, setEditingConta] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(null);
-
-  // === MENU DE CONTEXTO ===
   const [contextMenu, setContextMenu] = useState(null);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [editName, setEditName] = useState('');
-
-  // === CACHE DO GRUPO SELECIONADO ===
-  const prevSelectedRef = useRef(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (mainRef.current) setScrolled(mainRef.current.scrollTop > 0);
-    };
-    mainRef.current?.addEventListener('scroll', handleScroll);
-    return () => mainRef.current?.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleClick = () => {
-      setContextMenu(null);
-      setShowDatePicker(null);
-    };
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
-  useEffect(() => {
-    if (selectedGroup && selectedGroup !== prevSelectedRef.current) {
-      prevSelectedRef.current = selectedGroup;
-      setTarefas(selectedGroup.tarefas || []);
-      setCompras(selectedGroup.compras || []);
-      // Se o grupo salvo tiver dados de dashboard, usa. Senão, usa o padrão fixo.
-      if (selectedGroup.contas && selectedGroup.contas.length > 0) {
-         setContas(selectedGroup.contas);
-      }
-      // ao trocar de grupo, buscar contas detalhadas no backend
-      carregarContasDoGrupo(selectedGroup.id);
-    }
-  }, [selectedGroup]);
-
-  // === GERAR CÓDIGO (fallback) ===
-  const generateCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 20; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-  };
-
-  // === DADOS DO USUÁRIO (NOME / FOTO) ===
+  
   const [userIdDebug, setUserIdDebug] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState({
-    name: 'Jabuti de lago',
-    image: '/p1.png',
-  });
+  const [userProfile, setUserProfile] = useState({ name: 'Jabuti de lago', image: '/p1.png' });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get('uid');
-    const storedSession = sessionStorage.getItem('user_id');
-    const storedLocal = localStorage.getItem('user_id');
-    const finalId = fromQuery || storedSession || storedLocal || null;
-    
-    if (!finalId) {
-      setInitialLoading(false);
-      return;
-    }
-    setUserIdDebug(finalId);
-
+    const uid = params.get('uid') || sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
+    if(!uid) { setInitialLoading(false); return; }
+    setUserIdDebug(uid);
     try {
-      const rawExtra =
-        sessionStorage.getItem('user_extra') ||
-        localStorage.getItem('user_extra');
-      if (rawExtra) {
-        const extra = JSON.parse(rawExtra);
-        const name = extra?.name || extra?.username || 'Jabuti de lago';
-        let image = extra?.image || '/p1.png';
-
-        if (typeof image === 'string' && image.includes('public/')) {
-          const idx = image.indexOf('public/');
-          image = '/' + image.substring(idx + 'public/'.length);
-        }
-
-        setUserProfile({ name, image });
-      }
-    } catch (e) {
-      console.warn('[main] Não foi possível ler user_extra do storage:', e);
-    }
+       const extra = JSON.parse(sessionStorage.getItem('user_extra') || localStorage.getItem('user_extra') || '{}');
+       if(extra.name) setUserProfile({name: extra.name, image: extra.image || '/p1.png'});
+    } catch(e){}
   }, []);
 
-  // Função para buscar contas do grupo no backend
-  const carregarContasDoGrupo = async (grupoId) => {
-    if (!grupoId) return;
-    try {
-      const resp = await fetch(`http://localhost:8000/conta/${grupoId}`);
-      const data = await resp.json();
-      if (!resp.ok) {
-        console.warn('[main] Erro ao carregar contas do grupo:', data);
-        setContasDetalhadas([]);
-        return;
-      }
-      const lista = Array.isArray(data.data) ? data.data : [];
-      setContasDetalhadas(lista);
-    } catch (err) {
-      console.error('[main] Erro inesperado ao carregar contas do grupo:', err);
-      setContasDetalhadas([]);
-    }
-  };
-
-  // Carregar grupo do usuário
   useEffect(() => {
-    const carregarGrupoDoUsuario = async () => {
-      if (!userIdDebug) {
-        setInitialLoading(false);
-        return;
-      }
-      try {
-        const respUser = await fetch(
-          `http://localhost:8000/usuario/${encodeURIComponent(userIdDebug)}`
-        );
-        if (!respUser.ok) {
-          setInitialLoading(false);
-          return;
-        }
-        const userData = await respUser.json();
-        const item = userData?.data || userData;
-        const grupoId = item?.id_group;
-
-        try {
-          const name = item?.name || item?.username || userProfile.name;
-          let image = item?.image || userProfile.image;
-          if (typeof image === 'string' && image.includes('public/')) {
-            const idx = image.indexOf('public/');
-            image = '/' + image.substring(idx + 'public/'.length);
-          }
-          setUserProfile({ name, image });
-        } catch (e) {}
-
-        if (!grupoId) {
-          setShowCreateGroup(true);
-          setInitialLoading(false);
-          return;
-        }
-
-        const respGrupo = await fetch(`http://localhost:8000/grupo/${grupoId}`);
-        const grupoData = await respGrupo.json();
-        if (!respGrupo.ok || !grupoData?.data) {
-          setShowCreateGroup(true);
-          setInitialLoading(false);
-          return;
-        }
-
-        const grupo = grupoData.data;
-
-        const loadedGroup = {
-          id: grupo.id,
-          name: grupo.nome,
-          icon: '/planta.png',
-          tarefas: [],
-          compras: [],
-          contas: [...contas], // Usa o estado inicial (fixo) ou o que vier do back
-        };
-
-        setGroups([loadedGroup]);
-        setSelectedGroup(loadedGroup);
-        setShowCreateGroup(false);
-        setInitialLoading(false);
-      } catch (err) {
-        console.error('[main] Erro ao carregar grupo do usuário:', err);
-        setShowCreateGroup(true);
-        setInitialLoading(false);
-      }
+    const loadGroup = async () => {
+       if(!userIdDebug) { setInitialLoading(false); return; }
+       try {
+           const uRes = await fetch(`${API_URL}/usuario/${userIdDebug}`);
+           if(!uRes.ok) { setInitialLoading(false); return; }
+           const uData = await uRes.json();
+           const gid = (uData.data || uData).id_group;
+           if(!gid) { setShowCreateGroup(true); setInitialLoading(false); return; }
+           const gRes = await fetch(`${API_URL}/grupo/${gid}`);
+           const gData = await gRes.json();
+           if(gData.data) {
+               const g = { id: gData.data.id, name: gData.data.nome, icon: '/planta.png' };
+               setGroups([g]); setSelectedGroup(g); setShowCreateGroup(false);
+           }
+           setInitialLoading(false);
+       } catch(e) { console.error(e); setInitialLoading(false); }
     };
-
-    carregarGrupoDoUsuario();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadGroup();
   }, [userIdDebug]);
 
-  // === CRIAR GRUPO (BACKEND) ===
-  const handleCreateGroup = async (e) => {
-    e.preventDefault();
-    if (!groupName.trim() || !groupDescription.trim()) return;
-    if (!userIdDebug) {
-      alert('Usuário não identificado. Faça login novamente.');
-      return;
-    }
-
-    try {
-      const createResp = await fetch('http://localhost:8000/grupo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: groupName,
-          descricao: groupDescription,
-          group_owner: userIdDebug,
-        }),
-      });
-
-      const createData = await createResp.json();
-      if (!createResp.ok) {
-        alert(createData.detail || 'Erro ao criar grupo.');
-        return;
-      }
-
-      const grupo = createData.data;
-      const grupoId = grupo?.id;
-      const codConvite = grupo?.cod_convite;
-
-      if (!grupoId) return;
-
-      await fetch(
-        `http://localhost:8000/usuario/${encodeURIComponent(
-          userIdDebug
-        )}/grupo?grupo_id=${grupoId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-
-      const newGroup = {
-        id: grupoId,
-        name: grupo.nome,
-        icon: '/planta.png',
-        tarefas: [],
-        compras: [],
-        contas: [...contas],
-      };
-
-      setGroups(prev => [...prev, newGroup]);
-      setSelectedGroup(newGroup);
-      setGeneratedCode(
-        typeof codConvite === 'number' ? String(codConvite) : generateCode()
-      );
-      setShowCode(false);
-      setCopied(false);
-      setShowCreateGroup(false);
-      setShowInviteCode(true);
-      setGroupName('');
-      setGroupDescription('');
-      setInviteCode('');
-    } catch (err) {
-      alert('Erro inesperado ao criar grupo.');
-    }
-  };
-
-  // === ENTRAR COM CONVITE (BACKEND) ===
-  const handleJoinWithInvite = async (e) => {
-    e.preventDefault();
-    const trimmed = inviteCode.trim();
-    if (!trimmed) return;
-    if (!userIdDebug) return;
-
-    const numericCode = Number(trimmed);
-    if (Number.isNaN(numericCode)) {
-      alert('Código inválido.');
-      return;
-    }
-
-    try {
-      const grupoResp = await fetch(
-        `http://localhost:8000/grupo/codigo/${numericCode}`
-      );
-      const grupoData = await grupoResp.json();
-      if (!grupoResp.ok) {
-        alert(grupoData.detail || 'Grupo não encontrado.');
-        return;
-      }
-
-      const grupo = grupoData.data;
-      const grupoId = grupo?.id;
-      
-      const linkResp = await fetch(
-        `http://localhost:8000/usuario/${encodeURIComponent(
-          userIdDebug
-        )}/grupo?grupo_id=${grupoId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-
-      if (!linkResp.ok) return;
-
-      const newGroup = {
-        id: grupoId,
-        name: grupo.nome,
-        icon: '/planta.png',
-        tarefas: [],
-        compras: [],
-        contas: [...contas],
-      };
-
-      setGroups(prev => [...prev, newGroup]);
-      setSelectedGroup(newGroup);
-      setShowCreateGroup(false);
-      setInviteCode('');
-    } catch (err) {
-      alert('Erro inesperado.');
-    }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 5000);
-  };
-
-  const closePopups = () => {
-    setShowCreateGroup(false);
-    setShowInviteCode(false);
-    setInviteCode('');
-    setGroupName('');
-    setGroupDescription('');
-  };
-
-  // === MENU DE CONTEXTO ===
-  const openContextMenu = (e, group) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, groupId: group.id });
-  };
-
-  const startRename = (group) => {
-    setEditingGroupId(group.id);
-    setEditName(group.name);
-    setContextMenu(null);
-  };
-
-  const saveRename = () => {
-    if (!editName.trim()) return;
-    setGroups(prev => prev.map(g => g.id === editingGroupId ? { ...g, name: editName } : g));
-    if (selectedGroup?.id === editingGroupId) {
-      setSelectedGroup(prev => ({ ...prev, name: editName }));
-    }
-    setEditingGroupId(null);
-    setEditName('');
-  };
-
-  const deleteGroup = () => {
-    const newGroups = groups.filter(g => g.id !== contextMenu?.groupId);
-    setGroups(newGroups);
-    if (selectedGroup?.id === contextMenu?.groupId && newGroups.length > 0) {
-      setSelectedGroup(newGroups[0]);
-    }
-    setContextMenu(null);
-  };
-
-  // === TAREFAS ===
-  const addTask = () => {
-    const newTask = {
-      id: Date.now(),
-      descricao: '',
-      status: '',
-      prioridade: 'Média',
-      data: '',
-      responsavel: '/p1.png',
-      editing: true
-    };
-    setTarefas(prev => [...prev, newTask]);
-    setEditingTask(newTask.id);
-  };
-
-  const saveTask = (id) => {
-    setTarefas(prev => prev.map(t => t.id === id ? { ...t, editing: false } : t));
-    setEditingTask(null);
-  };
-
-  const deleteTask = (id) => {
-    setTarefas(prev => prev.filter(t => t.id !== id));
-  };
-
-  const cycleStatus = (taskId) => {
+  const cycleStatus = (id) => {
     setTarefas(prev => prev.map(t => {
-      if (t.id !== taskId) return t;
-      const order = ['', 'Não começou', 'Em andamento', 'Concluída'];
-      const currentIndex = order.indexOf(t.status);
-      const nextIndex = (currentIndex + 1) % order.length;
-      return { ...t, status: order[nextIndex] };
+      if(t.id!==id)return t;
+      const order=['','Não começou','Em andamento','Concluída'];
+      return {...t, status: order[(order.indexOf(t.status)+1)%order.length]};
     }));
   };
-
-  const cyclePrioridade = (id, isTask = true) => {
+  const cyclePrioridade = (id, isTask=true) => {
     const setter = isTask ? setTarefas : setCompras;
-    setter(prev => prev.map(item => {
-      if (item.id !== id) return item;
-      const order = ['Baixa', 'Média', 'Alta'];
-      const currentIndex = order.indexOf(item.prioridade);
-      const nextIndex = (currentIndex + 1) % order.length;
-      return { ...item, prioridade: order[nextIndex] };
+    setter(prev => prev.map(i => {
+      if(i.id!==id)return i;
+      const order=['Baixa','Média','Alta'];
+      return {...i, prioridade: order[(order.indexOf(i.prioridade)+1)%order.length]};
     }));
   };
-
-  // === COMPRAS ===
-  const cycleTipo = (compraId) => {
+  const cycleTipo = (id) => {
     setCompras(prev => prev.map(c => {
-      if (c.id !== compraId) return c;
-      const order = ['Outros', 'Limpeza', 'Comida'];
-      const currentIndex = order.indexOf(c.tipo);
-      const nextIndex = (currentIndex + 1) % order.length;
-      return { ...c, tipo: order[nextIndex] };
+      if(c.id!==id)return c;
+      const order=['Outros','Limpeza','Comida'];
+      return {...c, tipo: order[(order.indexOf(c.tipo)+1)%order.length]};
     }));
   };
-
-  const addCompra = () => {
-    const newCompra = {
-      id: Date.now(),
-      produto: '',
-      tipo: 'Outros',
-      prioridade: 'Média',
-      valor: '',
-      responsavel: '/p1.png',
-      editing: true
-    };
-    setCompras(prev => [...prev, newCompra]);
-    setEditingCompra(newCompra.id);
-  };
-
-  const saveCompra = (id) => {
-    setCompras(prev => prev.map(c => c.id === id ? { ...c, editing: false } : c));
-    setEditingCompra(null);
-  };
-
-  const deleteCompra = (id) => {
-    setCompras(prev => prev.filter(c => c.id !== id));
-  };
-
-  // === CONTAS DETALHADAS (NOVO: CADASTRAR/EDITAR) ===
-  const addContaDetalhada = () => {
-    const newConta = {
-      id: Date.now(),
-      status: false,
-      descricao: '',
-      categoria: 'Outros',
-      valor: 0,
-      datavencimento: '',
-      recorrente: false,
-      responsavel: '/p1.png',
-      editing: true
-    };
-    setContasDetalhadas(prev => [...prev, newConta]);
-    setEditingConta(newConta.id);
-  };
-
-  const saveContaDetalhada = (id) => {
-    setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, editing: false } : c));
-    setEditingConta(null);
-  };
-
-  const deleteContaDetalhada = (id) => {
-    setContasDetalhadas(prev => prev.filter(c => c.id !== id));
-  };
-
-  const cycleCategoriaConta = (contaId) => {
+  const cycleCategoriaConta = (id) => {
     setContasDetalhadas(prev => prev.map(c => {
-      if (c.id !== contaId) return c;
-      // Categorias fixas solicitadas
-      const order = ['Energia', 'Água', 'Internet', 'Aluguel', 'Outros'];
-      const currentIndex = order.indexOf(c.categoria);
-      const nextIndex = (currentIndex + 1) % order.length;
-      return { ...c, categoria: order[nextIndex] };
+      if(c.id!==id)return c;
+      const order=['Energia','Água','Internet','Aluguel','Outros'];
+      return {...c, categoria: order[(order.indexOf(c.categoria)+1)%order.length]};
     }));
   };
-
-  const updateContaDetalhadaValor = (id, inputValue) => {
-    const digits = inputValue.replace(/\D/g, '');
-    if (!digits) {
-      setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, valor: 0 } : c));
-      return;
-    }
-    const number = parseInt(digits, 10);
-    const finalValue = (number / 100); // mantém como float no estado
-    setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
+  const updateCompraValor = (id, val) => {
+    const num = parseInt(val.replace(/\D/g,''), 10);
+    setCompras(prev => prev.map(c => c.id===id ? {...c, valor: num?(num/100).toFixed(2):''} : c));
+  };
+  const updateContaDetalhadaValor = (id, val) => {
+    const num = parseInt(val.replace(/\D/g,''), 10);
+    setContasDetalhadas(prev => prev.map(c => c.id===id ? {...c, valor: num?(num/100):0} : c));
+  };
+  const updateCompraQuantidade = (id, val) => {
+    const num = parseInt(val.replace(/\D/g,''), 10);
+    setCompras(prev => prev.map(c => c.id===id ? {...c, quantidade: num || 1} : c));
   };
 
-  // === FORMATAÇÃO DE MOEDA ===
-  const formatCurrency = (value) => {
-    if (!value && value !== 0) return '';
-    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  // === ATUALIZAR CONTA (DASHBOARD - APENAS VALOR) ===
-  const updateContaDashboard = (id, inputValue) => {
-    const digits = inputValue.replace(/\D/g, '');
-    if (!digits) {
-      setContas(prev => prev.map(c => c.id === id ? { ...c, valor: 0 } : c));
-      return;
-    }
-
-    const number = parseInt(digits, 10);
-    const reais = Math.floor(number / 100);
-    const centavos = number % 100;
-    const finalValue = reais + (centavos / 100);
-
-    setContas(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
-  };
-
-  const updateCompraValor = (id, inputValue) => {
-    const digits = inputValue.replace(/\D/g, '');
-    if (!digits) {
-      setCompras(prev => prev.map(c => c.id === id ? { ...c, valor: '' } : c));
-      return;
-    }
-
-    const number = parseInt(digits, 10);
-    const finalValue = (number / 100).toFixed(2);
-    setCompras(prev => prev.map(c => c.id === id ? { ...c, valor: finalValue } : c));
-  };
-
-  // === CALENDÁRIO COMPARTILHADO (TAREFAS E CONTAS) ===
   const renderDatePicker = (itemId, currentDate, isTask = true) => {
     const date = currentDate ? new Date(currentDate) : new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const setDate = (dateStr) => {
+    const setDate = async (dateStr) => {
       if (isTask) {
         setTarefas(prev => prev.map(t => t.id === itemId ? { ...t, data: dateStr } : t));
+        const t = tarefas.find(x=>x.id===itemId);
+        if(t) await saveTask(t.id);
       } else {
         setContasDetalhadas(prev => prev.map(c => c.id === itemId ? { ...c, datavencimento: dateStr } : c));
+        const c = contasDetalhadas.find(x=>x.id===itemId);
+        if(c) await saveContaDetalhada(c.id);
       }
       setShowDatePicker(null);
     };
@@ -667,9 +601,6 @@ export default function TelaGrupo() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
             <div key={d} style={{ textAlign: 'center', fontWeight: 600, color: '#666' }}>{d}</div>
-          ))}
-          {Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => (
-            <div key={`empty-${i}`} />
           ))}
           {Array.from({ length: daysInMonth }, (_, i) => {
             const day = i + 1;
@@ -693,6 +624,58 @@ export default function TelaGrupo() {
       </div>
     );
   };
+
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if(!userIdDebug) return;
+    try {
+        const res = await fetch(`${API_URL}/grupo`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({nome:groupName, descricao:groupDescription, group_owner:userIdDebug})
+        });
+        const data = await res.json();
+        if(!res.ok) { alert(data.detail); return; }
+        const g = data.data;
+        await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, {method:'PATCH'});
+        const newG = {id: g.id, name: g.nome, icon:'/planta.png'};
+        setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false); setShowInviteCode(true);
+        setGeneratedCode(String(g.cod_convite));
+    } catch(e) { console.error(e); }
+  };
+  const handleJoinWithInvite = async (e) => {
+    e.preventDefault();
+    if(!inviteCode) return;
+    try {
+        const res = await fetch(`${API_URL}/grupo/codigo/${inviteCode}`);
+        const data = await res.json();
+        if(!res.ok) { alert(data.detail); return; }
+        const g = data.data;
+        await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, {method:'PATCH'});
+        const newG = {id: g.id, name: g.nome, icon:'/planta.png'};
+        setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false);
+    } catch(e){ console.error(e); }
+  };
+  const closePopups = () => { setShowCreateGroup(false); setShowInviteCode(false); };
+  const handleCopy = () => { navigator.clipboard.writeText(generatedCode); setCopied(true); setTimeout(()=>setCopied(false), 5000); };
+  const openContextMenu = (e, g) => { e.preventDefault(); setContextMenu({x:e.clientX,y:e.clientY,groupId:g.id}); };
+  const startRename = (g) => { setEditingGroupId(g.id); setEditName(g.name); setContextMenu(null); };
+  const saveRename = () => { setGroups(p=>p.map(g=>g.id===editingGroupId?{...g,name:editName}:g)); setEditingGroupId(null); };
+  const deleteGroup = async () => { 
+      await fetch(`${API_URL}/grupo/${contextMenu.groupId}`, {method:'DELETE'});
+      setGroups([]); setSelectedGroup(null); setShowCreateGroup(true); setContextMenu(null);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => mainRef.current && setScrolled(mainRef.current.scrollTop > 0);
+    mainRef.current?.addEventListener('scroll', handleScroll);
+    return () => mainRef.current?.removeEventListener('scroll', handleScroll);
+  }, []);
+  useEffect(() => {
+    const handleClick = () => { setContextMenu(null); setShowDatePicker(null); };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   return (
     <>
@@ -762,7 +745,7 @@ export default function TelaGrupo() {
         .resp{border-radius:50%;width:24px;height:24px;flex-shrink:0;}
         .add-row{margin-top:16px;color:#888;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-weight:600;font-size:15px;}
         .check-circle{width:23px;height:23px;border:2px solid #000;border-radius:50%;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-        .check-circle.checked{background:#C1D9C1;border-color:#000;}
+        .check-circle.checked{background:#10B981;border-color:#000;}
         .edit-input{width:100%;border:none;outline:none;font-size:14px;padding:4px 0;background:#fafafa;border-radius:4px;}
         .edit-input:focus{background:#fff;box-shadow:0 0 0 1px #667467;}
 
@@ -898,15 +881,13 @@ export default function TelaGrupo() {
                         <div className="profile-stack">
                           <img src="/p1.png" alt="p1" className="profile-img" />
                           <img src="/p2.png" alt="p2" className="profile-img" />
-                          <img src="/p3.png" alt="p3" className="profile-img" />
-                          <img src="/p4.png" alt="p4" className="profile-img" />
                         </div>
-                        <span>4 pessoas estão nesse grupo</span>
+                        <span>Membros do grupo</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* CONTAS (DASHBOARD) - MOVIDO PARA CIMA */}
+                  {/* CONTAS (DASHBOARD) - PREENCHIDO PELO CALCULAR DASHBOARD */}
                   <section className="dashboard">
                     <h3>Dashboard Financeiro</h3>
                     <div className="total-container">
@@ -934,22 +915,17 @@ export default function TelaGrupo() {
                       {contas.map(c => (
                         <li key={c.id} className="conta-item">
                           <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
-                          {/* Nome fixo, não editável */}
+                          {/* Nome fixo no dashboard */}
                           <span className="conta-nome">{c.nome}</span>
-                          <input
-                            type="text"
-                            className="conta-input valor-input"
-                            value={c.valor > 0 ? formatCurrency(c.valor) : ''}
-                            onChange={e => updateContaDashboard(c.id, e.target.value)}
-                            placeholder="R$ 0,00"
-                            style={{ width: 90 }}
-                          />
+                          <span className="conta-input valor-input">
+                             R$ {c.valor > 0 ? formatCurrency(c.valor) : '0,00'}
+                          </span>
                         </li>
                       ))}
                     </ul>
                   </section>
 
-                  {/* TAREFAS - MOVIDO PARA BAIXO */}
+                  {/* TAREFAS */}
                   <section className="dashboard">
                     <h3>Tarefas</h3>
                     <div style={{ overflow: 'hidden', borderRadius: 12 }}>
@@ -993,7 +969,7 @@ export default function TelaGrupo() {
                               <td>
                                 <div
                                   className={`check-circle ${t.checked ? 'checked' : ''}`}
-                                  onClick={() => !t.checked && handleTaskCheck(t.id)}
+                                  onClick={() => handleTaskCheck(t)}
                                 />
                               </td>
                               <td>
@@ -1013,18 +989,18 @@ export default function TelaGrupo() {
                               </td>
                               <td>
                                 <div
-                                  className={`tag-display ${!t.status ? 'empty' : ''}`}
+                                  className={`tag-display ${!t.status || t.status === 'Não começou' ? 'empty' : ''}`}
                                   style={{
-                                    backgroundColor: !t.status ? '#f3f4f6' : 
+                                    backgroundColor: (!t.status || t.status === 'Não começou') ? '#f3f4f6' : 
                                       t.status === 'Concluída' ? '#d5f5e3' : 
                                       t.status === 'Em andamento' ? '#fef3c7' : '#e5e7eb',
-                                    color: !t.status ? '#9ca3af' : 
+                                    color: (!t.status || t.status === 'Não começou') ? '#9ca3af' : 
                                       t.status === 'Concluída' ? '#2e7d32' : 
                                       t.status === 'Em andamento' ? '#d97706' : '#4b5563'
                                   }}
                                   onClick={() => cycleStatus(t.id)}
                                 >
-                                  {t.status || 'Selecionar'} <FiChevronDown />
+                                  {t.status || 'Não começou'} <FiChevronDown />
                                 </div>
                               </td>
                               <td>
@@ -1066,7 +1042,7 @@ export default function TelaGrupo() {
                     <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
                   </section>
 
-                  {/* LISTA DE CONTAS DETALHADA - COM BOTÃO DE CADASTRAR */}
+                  {/* LISTA DE CONTAS DETALHADA */}
                   <section className="dashboard">
                     <h3>Lista de contas</h3>
                     <div style={{ overflow: 'hidden', borderRadius: 12 }}>
@@ -1121,11 +1097,10 @@ export default function TelaGrupo() {
                               <td>
                                 <div
                                   className={`check-circle ${c.status ? 'checked' : ''}`}
-                                  onClick={() => !c.status && handleContaCheck(c.id)}
+                                  onClick={() => handleContaCheck(c)}
                                 />
                               </td>
 
-                              {/* Descrição com Edição */}
                               <td>
                                 {c.editing || editingConta === c.id ? (
                                   <input
@@ -1142,7 +1117,6 @@ export default function TelaGrupo() {
                                 )}
                               </td>
 
-                              {/* Categoria com Ciclo */}
                               <td>
                                 <div
                                   className="tag-display"
@@ -1156,19 +1130,18 @@ export default function TelaGrupo() {
                                 </div>
                               </td>
 
-                              {/* Valor Editável */}
                               <td>
                                 <input
                                   type="text"
                                   className="edit-input"
                                   value={c.valor > 0 ? formatCurrency(c.valor) : ''}
                                   onChange={e => updateContaDetalhadaValor(c.id, e.target.value)}
+                                  onBlur={() => saveContaDetalhada(c.id)}
                                   placeholder="R$ 0,00"
                                   style={{ width: 80, textAlign: 'right', fontFamily: 'monospace' }}
                                 />
                               </td>
 
-                              {/* Vencimento */}
                               <td>
                                 <div
                                   onClick={(e) => {
@@ -1183,7 +1156,6 @@ export default function TelaGrupo() {
                                 {showDatePicker === c.id && renderDatePicker(c.id, c.datavencimento, false)}
                               </td>
 
-                              {/* Recorrente? */}
                               <td>
                                 <div
                                   className="tag-display"
@@ -1191,7 +1163,11 @@ export default function TelaGrupo() {
                                     backgroundColor: c.recorrente ? '#dcfce7' : '#fee2e2',
                                     color: c.recorrente ? '#166534' : '#b91c1c',
                                   }}
-                                  onClick={() => setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: !item.recorrente } : item))}
+                                  onClick={() => {
+                                     const newValue = !c.recorrente;
+                                     setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: newValue } : item));
+                                     // Opcional: salvar imediatamente
+                                  }}
                                 >
                                   {c.recorrente ? 'Sim' : 'Não'}
                                 </div>
@@ -1208,7 +1184,6 @@ export default function TelaGrupo() {
                         </tbody>
                       </table>
                     </div>
-                    {/* BOTÃO DE CADASTRAR CONTA */}
                     <div className="add-row" onClick={addContaDetalhada}><FiPlus style={{ fontSize: '18px' }} /></div>
                   </section>
 
@@ -1222,18 +1197,19 @@ export default function TelaGrupo() {
                         </colgroup>
                         <thead>
                           <tr>
-                            {['Comprado?', 'Produto', 'Tipo', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
+                            {['Check', 'Produto', 'Tipo', 'Qtd', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
                               <th key={i}>
                                 <div className="th-label">
                                   {i === 0 && <FiCheck />}
                                   {i === 1 && <FiAlignLeft />}
                                   {i === 2 && <FiTag />}
-                                  {i === 3 && <FiDollarSign />}
-                                  {i === 4 && <FiAlertCircle />}
-                                  {i === 5 && <FiUser />}
+                                  {i === 3 && <FiTag />} {/* Ícone para Qtd */}
+                                  {i === 4 && <FiDollarSign />}
+                                  {i === 5 && <FiAlertCircle />}
+                                  {i === 6 && <FiUser />}
                                   <span>{label}</span>
                                 </div>
-                                {i < 5 && (
+                                {i < 6 && (
                                   <div
                                     className="resize-handle"
                                     onPointerDown={(e) => startResize(e, 'compras', i)}
@@ -1256,7 +1232,7 @@ export default function TelaGrupo() {
                               <td>
                                 <div
                                   className={`check-circle ${c.checked ? 'checked' : ''}`}
-                                  onClick={() => !c.checked && handleCompraCheck(c.id)}
+                                  onClick={() => handleCompraCheck(c)}
                                 />
                               </td>
                               <td>
@@ -1286,12 +1262,24 @@ export default function TelaGrupo() {
                                   {c.tipo} <FiChevronDown />
                                 </div>
                               </td>
+                              {/* NOVA COLUNA DE QUANTIDADE */}
+                              <td>
+                                <input
+                                  type="text"
+                                  className="edit-input"
+                                  value={c.quantidade || 1}
+                                  onChange={e => updateCompraQuantidade(c.id, e.target.value)}
+                                  onBlur={() => saveCompra(c.id)}
+                                  style={{ width: 50, textAlign: 'center', fontFamily: 'monospace' }}
+                                />
+                              </td>
                               <td>
                                 <input
                                   type="text"
                                   className="edit-input"
                                   value={c.valor ? formatCurrency(parseFloat(c.valor)) : ''}
                                   onChange={e => updateCompraValor(c.id, e.target.value)}
+                                  onBlur={() => saveCompra(c.id)}
                                   placeholder="R$ 0,00"
                                   style={{ width: 70, textAlign: 'right', fontFamily: 'monospace' }}
                                 />
