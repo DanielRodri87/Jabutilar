@@ -99,10 +99,8 @@ export default function Login() {
             if (response.ok) {
                 console.log('Login realizado com sucesso! Resposta completa:', data);
 
-                // --- NOVO: usar formato padronizado do backend ---
                 const userId = data?.user_id || data?.user?.id;
-                const extraData = data?.extra_data || null; // NOVO
-                // --- FIM NOVO ---
+                const extraData = data?.extra_data || null;
 
                 if (userId) {
                     sessionStorage.setItem('user_id', userId);
@@ -111,7 +109,6 @@ export default function Login() {
                     console.warn('ID de usuário não encontrado na resposta de login.');
                 }
 
-                // NOVO: guarda dados do user_data para usar na main.js
                 if (extraData) {
                     try {
                         const serialized = JSON.stringify(extraData);
@@ -141,47 +138,10 @@ export default function Login() {
             
             console.log(`Iniciando login com ${provider}`);
             
-            // Lógica Específica para Facebook (se necessário)
-            if (provider === 'facebook' && typeof window !== 'undefined') {
-                const authUrl = getAuthUrl('facebook');
-                if (authUrl) {
-                    sessionStorage.setItem('oauth_provider', provider);
-                    
-                    const width = 600;
-                    const height = 600;
-                    const left = (window.screen.width / 2) - (width / 2);
-                    const top = (window.screen.height / 2) - (height / 2);
-                    
-                    const popup = window.open(
-                        authUrl,
-                        'facebook-login',
-                        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,location=yes`
-                    );
-                    
-                    const checkClosed = setInterval(() => {
-                        if (popup.closed) {
-                            clearInterval(checkClosed);
-                            setSocialLoading(prev => ({ ...prev, [provider]: false }));
-                            
-                            const authResult = sessionStorage.getItem('facebook_auth_result');
-                            if (authResult === 'success') {
-                                sessionStorage.removeItem('facebook_auth_result');
-                                const fbUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || '';
-                                console.log('[facebook] encerrado popup. user_id encontrado:', fbUserId);
-                                window.location.href = `/main${fbUserId ? `?uid=${encodeURIComponent(fbUserId)}` : ''}`;
-                            } else if (authResult === 'error') {
-                                sessionStorage.removeItem('facebook_auth_result');
-                                setErrorMessage('Erro no login com Facebook. Tente novamente.');
-                            }
-                        }
-                    }, 1000);
-                    
-                    return;
-                }
-            }
+            // --- CORREÇÃO: Usar sempre a rota do Backend para gerar a URL ---
+            // Isso garante que o estado (state) seja registrado no Supabase,
+            // prevenindo o erro "invalid flow state".
             
-            // Lógica Genérica (Google e fallback) via Backend
-            // O backend deve ter as chaves GOCSPX configuradas
             const response = await fetch(`http://localhost:8000/auth/${provider}/url`, {
                 method: 'GET',
                 headers: {
@@ -214,7 +174,23 @@ export default function Login() {
                         clearInterval(checkClosed);
                         setSocialLoading(prev => ({ ...prev, [provider]: false }));
                         
-                        // Opcional: Verificar cookie ou sessionStorage aqui se o backend setar algo
+                        // Verifica se o callback (facebook/callback.js) salvou o resultado na sessão
+                        // O callback deve salvar 'facebook_auth_result' como 'success' ou 'error'
+                        // Como agora usamos o backend para todos, você pode padronizar para verificar 'social_auth_result' 
+                        // ou manter 'facebook_auth_result' se o seu callback.js específico do Facebook estiver fazendo isso.
+                        
+                        // Verificando especificamente para o Facebook conforme seu callback atual:
+                        const authResult = sessionStorage.getItem('facebook_auth_result');
+                        
+                        if (authResult === 'success') {
+                            sessionStorage.removeItem('facebook_auth_result');
+                            const userId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || '';
+                            console.log(`[${provider}] Login encerrado com sucesso. user_id:`, userId);
+                            window.location.href = `/main${userId ? `?uid=${encodeURIComponent(userId)}` : ''}`;
+                        } else if (authResult === 'error') {
+                            sessionStorage.removeItem('facebook_auth_result');
+                            setErrorMessage(`Erro no login com ${provider}. Tente novamente.`);
+                        }
                     }
                 }, 1000);
             } else {
