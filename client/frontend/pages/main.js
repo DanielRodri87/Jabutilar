@@ -1,17 +1,144 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiSettings, FiBell, FiUser, FiPlus,
   FiCheck, FiEdit3, FiTrash2, FiCalendar,
   FiAlignLeft, FiCheckSquare, FiAlertCircle,
-  FiTag, FiDollarSign, FiChevronDown
+  FiTag, FiDollarSign, FiChevronDown,
+  FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 
 const API_URL = 'http://localhost:8000';
+
+const DatePicker = ({ initialDate, onSelect, onClose, anchorEl }) => {
+  const [viewDate, setViewDate] = useState(initialDate ? new Date(initialDate) : new Date());
+  const [mode, setMode] = useState('day'); // 'day', 'month', 'year'
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + window.scrollY + 5,
+        left: rect.left + window.scrollX
+      });
+    }
+  }, [anchorEl]);
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const changeMonth = (offset) => {
+    setViewDate(new Date(year, month + offset, 1));
+  };
+
+  const changeYear = (offset) => {
+    setViewDate(new Date(year + offset, month, 1));
+  };
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
+
+  const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const handleDayClick = (day) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    onSelect(dateStr);
+  };
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: 'absolute',
+        top: position.top,
+        left: position.left,
+        background: '#fff',
+        border: '1px solid #ddd',
+        borderRadius: 12,
+        padding: 12,
+        boxShadow: '0 8px 25px rgba(0,0,0,.12)',
+        zIndex: 9999,
+        fontSize: 13,
+        minWidth: 220
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div onClick={() => changeMonth(-1)} style={{ cursor: 'pointer', padding: 4 }}><FiChevronLeft /></div>
+        <div style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => setMode(mode === 'day' ? 'month' : 'day')}>
+          {months[month]} {year}
+        </div>
+        <div onClick={() => changeMonth(1)} style={{ cursor: 'pointer', padding: 4 }}><FiChevronRight /></div>
+      </div>
+
+      {mode === 'day' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
+            <div key={d} style={{ textAlign: 'center', fontWeight: 600, color: '#666', fontSize: 11 }}>{d}</div>
+          ))}
+          {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`empty-${i}`} />)}
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isSelected = initialDate === dateStr;
+            return (
+              <div
+                key={day}
+                style={{
+                  textAlign: 'center', padding: '6px 4px', cursor: 'pointer', borderRadius: 8,
+                  background: isSelected ? '#C1D9C1' : 'transparent',
+                  color: isSelected ? '#000' : '#333',
+                  fontWeight: isSelected ? 600 : 400
+                }}
+                onClick={() => handleDayClick(day)}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {mode === 'month' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {months.map((m, i) => (
+            <div
+              key={m}
+              style={{
+                textAlign: 'center', padding: 6, cursor: 'pointer', borderRadius: 8,
+                background: i === month ? '#C1D9C1' : '#f3f4f6',
+                fontSize: 12
+              }}
+              onClick={() => {
+                setViewDate(new Date(year, i, 1));
+                setMode('day');
+              }}
+            >
+              {m.substring(0, 3)}
+            </div>
+          ))}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+            <div onClick={() => changeYear(-1)} style={{ cursor: 'pointer', padding: 4 }}><FiChevronLeft /></div>
+            <span style={{ fontWeight: 600 }}>{year}</span>
+            <div onClick={() => changeYear(1)} style={{ cursor: 'pointer', padding: 4 }}><FiChevronRight /></div>
+          </div>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+};
 
 export default function TelaGrupo() {
   // ================= ESTADOS GERAIS =================
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+
 
   // Listas de dados
   const [tarefas, setTarefas] = useState([]);
@@ -31,16 +158,16 @@ export default function TelaGrupo() {
       if (res.ok) {
         const data = await res.json();
         const formatted = data.map(n => ({
-            ...n,
-            time: new Date(n.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          ...n,
+          time: new Date(n.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         }));
 
         setNotifications(prev => {
-            if (JSON.stringify(prev) !== JSON.stringify(formatted)) {
-                if (formatted.length > prev.length) setHasUnread(true);
-                return formatted;
-            }
-            return prev;
+          if (JSON.stringify(prev) !== JSON.stringify(formatted)) {
+            if (formatted.length > prev.length) setHasUnread(true);
+            return formatted;
+          }
+          return prev;
         });
       }
     } catch (e) {
@@ -52,10 +179,10 @@ export default function TelaGrupo() {
   useEffect(() => {
     let interval;
     if (selectedGroup?.id) {
+      fetchNotifications(selectedGroup.id);
+      interval = setInterval(() => {
         fetchNotifications(selectedGroup.id);
-        interval = setInterval(() => {
-            fetchNotifications(selectedGroup.id);
-        }, 5000);
+      }, 5000);
     }
     return () => clearInterval(interval);
   }, [selectedGroup]);
@@ -64,29 +191,29 @@ export default function TelaGrupo() {
   // Função auxiliar para CRIAR notificação no servidor
   const addNotification = async (message, type) => {
     if (!selectedGroup) return;
-    
+
     // UI Otimista
     const tempNotif = {
-        id: Date.now(),
-        mensagem: message,
-        tipo: type,
-        created_at: new Date().toISOString(),
-        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      id: Date.now(),
+      mensagem: message,
+      tipo: type,
+      created_at: new Date().toISOString(),
+      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
     setNotifications(prev => [tempNotif, ...prev]);
 
     try {
-        await fetch(`${API_URL}/notificacao`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                grupo_id: Number(selectedGroup.id),
-                mensagem: message,
-                tipo: type
-            })
-        });
+      await fetch(`${API_URL}/notificacao`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grupo_id: Number(selectedGroup.id),
+          mensagem: message,
+          tipo: type
+        })
+      });
     } catch (e) {
-        console.error("Erro ao enviar notificação", e);
+      console.error("Erro ao enviar notificação", e);
     }
   };
 
@@ -96,19 +223,19 @@ export default function TelaGrupo() {
     setNotifications([]);
     setHasUnread(false);
     try {
-        await fetch(`${API_URL}/notificacao/${selectedGroup.id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/notificacao/${selectedGroup.id}`, { method: 'DELETE' });
     } catch (e) { console.error("Erro ao limpar notificações", e); }
   };
 
   // Dashboard
   const [contas, setContas] = useState([
-    { id: 1, nome: 'Energia', valor: 0, cor: '#E4A87B' },
-    { id: 2, nome: 'Água', valor: 0, cor: '#A0BF9F' },
-    { id: 3, nome: 'Internet', valor: 0, cor: '#8B5CF6' },
-    { id: 4, nome: 'Aluguel', valor: 0, cor: '#92B6E4' },
-    { id: 5, nome: 'Alimentação', valor: 0, cor: '#10B981' },
-    { id: 7, nome: 'Limpeza', valor: 0, cor: '#EC4899' },
-    { id: 6, nome: 'Outros', valor: 0, cor: '#9BBFC0' },
+    { id: 1, nome: 'Energia', valor: 0, cor: '#91B6E4' },
+    { id: 2, nome: 'Água', valor: 0, cor: '#E4A87B' },
+    { id: 3, nome: 'Internet', valor: 0, cor: '#B57BE4' },
+    { id: 4, nome: 'Aluguel', valor: 0, cor: '#A0BF9F' },
+    { id: 5, nome: 'Alimentação', valor: 0, cor: '#9BBFC0' },
+    { id: 7, nome: 'Limpeza', valor: 0, cor: '#D49191' },
+    { id: 6, nome: 'Outros', valor: 0, cor: '#F5CF88' },
   ]);
   const totalContas = contas.reduce((acc, c) => acc + c.valor, 0);
 
@@ -129,10 +256,11 @@ export default function TelaGrupo() {
 
   // === REDIMENSIONAMENTO DE COLUNAS ===
   const [columnWidths, setColumnWidths] = useState({
-    tarefas: [50, 220, 130, 110, 120, 70],
-    compras: [50, 200, 110, 60, 100, 110, 70],
-    contas:  [50, 220, 130, 100, 120, 120, 70],
+    tarefas: [50, 250, 130, 110, 120, 70],
+    compras: [50, 250, 130, 110, 120, 120, 70],
+    contas: [50, 250, 130, 110, 120, 120, 70],
   });
+  const [anchorEl, setAnchorEl] = useState(null);
   const isResizing = useRef(null);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -192,7 +320,7 @@ export default function TelaGrupo() {
       setTarefas([]);
       setCompras([]);
       setContasDetalhadas([]);
-      setNotifications([]); 
+      setNotifications([]);
       calcularDashboard();
 
       fetchTarefas(selectedGroup.id);
@@ -238,34 +366,34 @@ export default function TelaGrupo() {
     const params = new URLSearchParams(window.location.search);
     const isNew = params.get('new') === 'true';
     const storageShow = sessionStorage.getItem('show_profile_selector') === 'true';
-    
+
     if (isNew || storageShow || (userProfile.image === '/fotodeperfil.png')) {
-        setShowAvatarModal(true);
-        sessionStorage.removeItem('show_profile_selector');
-        if (isNew) {
-            const newUrl = window.location.pathname + window.location.search.replace(/[\?&]new=true/, '');
-            window.history.replaceState({}, '', newUrl);
-        }
+      setShowAvatarModal(true);
+      sessionStorage.removeItem('show_profile_selector');
+      if (isNew) {
+        const newUrl = window.location.pathname + window.location.search.replace(/[\?&]new=true/, '');
+        window.history.replaceState({}, '', newUrl);
+      }
     }
-  }, [userProfile.image]); 
+  }, [userProfile.image]);
 
   const handleSelectAvatar = async (avatarUrl) => {
     setUserProfile(prev => ({ ...prev, image: avatarUrl }));
     setShowAvatarModal(false);
     try {
-        const extra = JSON.parse(sessionStorage.getItem('user_extra') || '{}');
-        extra.image = avatarUrl;
-        const extraString = JSON.stringify(extra);
-        sessionStorage.setItem('user_extra', extraString);
-        localStorage.setItem('user_extra', extraString);
-        
-        if (userIdDebug) {
-            await fetch(`${API_URL}/usuario/${userIdDebug}/avatar`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: avatarUrl })
-            });
-        }
+      const extra = JSON.parse(sessionStorage.getItem('user_extra') || '{}');
+      extra.image = avatarUrl;
+      const extraString = JSON.stringify(extra);
+      sessionStorage.setItem('user_extra', extraString);
+      localStorage.setItem('user_extra', extraString);
+
+      if (userIdDebug) {
+        await fetch(`${API_URL}/usuario/${userIdDebug}/avatar`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: avatarUrl })
+        });
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -303,7 +431,7 @@ export default function TelaGrupo() {
           produto: c.nome,
           tipo: c.categoria || 'Outros',
           valor: c.preco,
-          quantidade: c.quantidade || 1, 
+          quantidade: c.quantidade || 1,
           checked: c.comprado,
           prioridade: 'Média',
           responsavel: '/p1.png',
@@ -388,7 +516,7 @@ export default function TelaGrupo() {
             grupo_id: Number(selectedGroup.id)
           })
         });
-      } catch(e) { console.error(e); }
+      } catch (e) { console.error(e); }
     } else {
       setTarefas(prev => prev.map(t => t.id === task.id ? { ...t, checked: false, status: 'Não começou' } : t));
       setRemovingTaskId(task.id);
@@ -396,7 +524,7 @@ export default function TelaGrupo() {
         try {
           await fetch(`${API_URL}/tarefa/${task.id}`, { method: 'DELETE' });
           setTarefas(prev => prev.filter(t => t.id !== task.id));
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
         setRemovingTaskId(null);
       }, 500);
     }
@@ -407,7 +535,7 @@ export default function TelaGrupo() {
       setCompras(prev => prev.map(c => c.id === compra.id ? { ...c, checked: true } : c));
       try {
         await fetch(`${API_URL}/itens-compra/${compra.id}/comprado?comprado=true`, { method: 'PATCH' });
-      } catch(e) { console.error(e); }
+      } catch (e) { console.error(e); }
     } else {
       setCompras(prev => prev.map(c => c.id === compra.id ? { ...c, checked: false } : c));
       setRemovingCompraId(compra.id);
@@ -415,7 +543,7 @@ export default function TelaGrupo() {
         try {
           await fetch(`${API_URL}/itens-compra/${compra.id}`, { method: 'DELETE' });
           setCompras(prev => prev.filter(c => c.id !== compra.id));
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
         setRemovingCompraId(null);
       }, 500);
     }
@@ -439,7 +567,7 @@ export default function TelaGrupo() {
             grupo_id: Number(selectedGroup.id)
           })
         });
-      } catch(e) { console.error(e); }
+      } catch (e) { console.error(e); }
     } else {
       setContasDetalhadas(prev => prev.map(c => c.id === conta.id ? { ...c, status: false } : c));
       setRemovingContaId(conta.id);
@@ -447,7 +575,7 @@ export default function TelaGrupo() {
         try {
           await fetch(`${API_URL}/conta/${conta.id}`, { method: 'DELETE' });
           setContasDetalhadas(prev => prev.filter(c => c.id !== conta.id));
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
         setRemovingContaId(null);
       }, 500);
     }
@@ -485,11 +613,11 @@ export default function TelaGrupo() {
           responsavel: '/p1.png',
           editing: true,
           checked: false,
-          isNew: true 
+          isNew: true
         }]);
         setEditingTask(t.id);
       }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   };
 
   const saveTask = async (id) => {
@@ -502,7 +630,7 @@ export default function TelaGrupo() {
 
     setTarefas(prev => prev.map(item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingTask(null);
-    
+
     await fetch(`${API_URL}/tarefa/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -552,20 +680,20 @@ export default function TelaGrupo() {
         }]);
         setEditingCompra(c.id);
       }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   };
 
   const saveCompra = async (id) => {
     const c = compras.find(x => x.id === id);
     if (!c) return;
-    
+
     if (c.isNew) {
       await addNotification(`Novo item na lista: "${c.produto}"`, 'compra');
     }
 
-    setCompras(prev => prev.map (item => item.id === id ? { ...item, editing: false, isNew: false } : item));
+    setCompras(prev => prev.map(item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingCompra(null);
-    
+
     await fetch(`${API_URL}/itens-compra/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -607,7 +735,7 @@ export default function TelaGrupo() {
           descricao: c.descricao,
           categoria: 'Outros',
           valor: 0,
-          datavencimento: c.datavenc,
+          datavencimento: c.datavenc ? c.datavenc.split('T')[0] : '',
           recorrente: false,
           responsavel: '/p1.png',
           editing: true,
@@ -615,7 +743,7 @@ export default function TelaGrupo() {
         }]);
         setEditingConta(c.id);
       }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   };
 
   const saveContaDetalhada = async (id) => {
@@ -628,7 +756,7 @@ export default function TelaGrupo() {
 
     setContasDetalhadas(prev => prev.map(item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingConta(null);
-    
+
     await fetch(`${API_URL}/conta/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -679,195 +807,159 @@ export default function TelaGrupo() {
   const [contextMenu, setContextMenu] = useState(null);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [editName, setEditName] = useState('');
-  
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const uid = params.get('uid') || sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
-    if(!uid) { setInitialLoading(false); return; }
+    if (!uid) { setInitialLoading(false); return; }
     setUserIdDebug(uid);
     try {
-       const extra = JSON.parse(sessionStorage.getItem('user_extra') || localStorage.getItem('user_extra') || '{}');
-       setUserProfile(prev => ({
-           ...prev,
-           name: extra.name || prev.name,
-           image: extra.image || prev.image
-       }));
-    } catch(e){}
+      const extra = JSON.parse(sessionStorage.getItem('user_extra') || localStorage.getItem('user_extra') || '{}');
+      setUserProfile(prev => ({
+        ...prev,
+        name: extra.name || prev.name,
+        image: extra.image || prev.image
+      }));
+    } catch (e) { }
   }, []);
 
   useEffect(() => {
     const loadGroup = async () => {
-       if(!userIdDebug) { setInitialLoading(false); return; }
-       try {
-           const uRes = await fetch(`${API_URL}/usuario/${userIdDebug}`);
-           if(!uRes.ok) { setInitialLoading(false); return; }
-           const uData = await uRes.json();
-           const gid = (uData.data || uData).id_group;
-           if(!gid) { 
-             setShowCreateGroup(true); 
-             setGroups([]);
-             setSelectedGroup(null);
-             setTarefas([]);
-             setCompras([]);
-             setContasDetalhadas([]);
-             calcularDashboard();
-             setInitialLoading(false); 
-             return; 
-           }
-           const gRes = await fetch(`${API_URL}/grupo/${gid}`);
-           const gData = await gRes.json();
-           if(gData.data) {
-               const g = { id: gData.data.id, name: gData.data.nome, icon: '/planta.png' };
-               setGroups([g]); 
-               setSelectedGroup(g);
-               setTarefas([]);
-               setCompras([]);
-               setContasDetalhadas([]);
-               calcularDashboard();
-               setShowCreateGroup(false);
-           }
-           setInitialLoading(false);
-       } catch(e) { 
-         console.error(e); 
-         setInitialLoading(false); 
-       }
+      if (!userIdDebug) { setInitialLoading(false); return; }
+      try {
+        const uRes = await fetch(`${API_URL}/usuario/${userIdDebug}`);
+        if (!uRes.ok) { setInitialLoading(false); return; }
+        const uData = await uRes.json();
+        const gid = (uData.data || uData).id_group;
+        if (!gid) {
+          setShowCreateGroup(true);
+          setGroups([]);
+          setSelectedGroup(null);
+          setTarefas([]);
+          setCompras([]);
+          setContasDetalhadas([]);
+          calcularDashboard();
+          setInitialLoading(false);
+          return;
+        }
+        const gRes = await fetch(`${API_URL}/grupo/${gid}`);
+        const gData = await gRes.json();
+        if (gData.data) {
+          const g = { id: gData.data.id, name: gData.data.nome, icon: '/planta.png' };
+          setGroups([g]);
+          setSelectedGroup(g);
+          setTarefas([]);
+          setCompras([]);
+          setContasDetalhadas([]);
+          calcularDashboard();
+          setShowCreateGroup(false);
+        }
+        setInitialLoading(false);
+      } catch (e) {
+        console.error(e);
+        setInitialLoading(false);
+      }
     };
     loadGroup();
   }, [userIdDebug]);
 
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!selectedGroup) return;
+      try {
+        const res = await fetch(`${API_URL}/usuario?id_group=${selectedGroup.id}`);
+        const data = await res.json();
+        if (data.data) {
+          const members = data.data.filter(u => Number(u.id_group) === Number(selectedGroup.id));
+          setGroupMembers(prev => ({ ...prev, total_usuarios: members.length }));
+        }
+      } catch (e) { console.error(e); }
+    };
+    fetchMembers();
+  }, [selectedGroup]);
+
   const cycleStatus = (id) => {
     setTarefas(prev => prev.map(t => {
-      if(t.id!==id)return t;
-      const order=['','Não começou','Em andamento','Concluída'];
-      return {...t, status: order[(order.indexOf(t.status)+1)%order.length]};
+      if (t.id !== id) return t;
+      const order = ['', 'Não começou', 'Em andamento', 'Concluída'];
+      return { ...t, status: order[(order.indexOf(t.status) + 1) % order.length] };
     }));
   };
-  const cyclePrioridade = (id, isTask=true) => {
+  const cyclePrioridade = (id, isTask = true) => {
     const setter = isTask ? setTarefas : setCompras;
     setter(prev => prev.map(i => {
-      if(i.id!==id)return i;
-      const order=['Baixa','Média','Alta'];
-      return {...i, prioridade: order[(order.indexOf(i.prioridade)+1)%order.length]};
+      if (i.id !== id) return i;
+      const order = ['Baixa', 'Média', 'Alta'];
+      return { ...i, prioridade: order[(order.indexOf(i.prioridade) + 1) % order.length] };
     }));
   };
   const cycleTipo = (id) => {
     setCompras(prev => prev.map(c => {
-      if(c.id!==id)return c;
-      const order=['Outros','Limpeza','Comida'];
-      return {...c, tipo: order[(order.indexOf(c.tipo)+1)%order.length]};
+      if (c.id !== id) return c;
+      const order = ['Outros', 'Limpeza', 'Comida'];
+      return { ...c, tipo: order[(order.indexOf(c.tipo) + 1) % order.length] };
     }));
   };
   const cycleCategoriaConta = (id) => {
     setContasDetalhadas(prev => prev.map(c => {
-      if(c.id!==id)return c;
-      const order=['Energia','Água','Internet','Aluguel','Outros'];
-      return {...c, categoria: order[(order.indexOf(c.categoria)+1)%order.length]};
+      if (c.id !== id) return c;
+      const order = ['Energia', 'Água', 'Internet', 'Aluguel', 'Outros'];
+      return { ...c, categoria: order[(order.indexOf(c.categoria) + 1) % order.length] };
     }));
   };
   const updateCompraValor = (id, val) => {
-    const num = parseInt(val.replace(/\D/g,''), 10);
-    setCompras(prev => prev.map(c => c.id===id ? {...c, valor: num?(num/100).toFixed(2):''} : c));
+    const num = parseInt(val.replace(/\D/g, ''), 10);
+    setCompras(prev => prev.map(c => c.id === id ? { ...c, valor: num ? (num / 100).toFixed(2) : '' } : c));
   };
   const updateContaDetalhadaValor = (id, val) => {
-    const num = parseInt(val.replace(/\D/g,''), 10);
-    setContasDetalhadas(prev => prev.map(c => c.id===id ? {...c, valor: num?(num/100):0} : c));
+    const num = parseInt(val.replace(/\D/g, ''), 10);
+    setContasDetalhadas(prev => prev.map(c => c.id === id ? { ...c, valor: num ? (num / 100) : 0 } : c));
   };
   const updateCompraQuantidade = (id, val) => {
-    const num = parseInt(val.replace(/\D/g,''), 10);
-    setCompras(prev => prev.map(c => c.id===id ? {...c, quantidade: num || 1} : c));
-  };
-
-  const renderDatePicker = (itemId, currentDate, isTask = true) => {
-    const date = currentDate ? new Date(currentDate) : new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const setDate = async (dateStr) => {
-      if (isTask) {
-        setTarefas(prev => prev.map(t => t.id === itemId ? { ...t, data: dateStr } : t));
-        const t = tarefas.find(x=>x.id===itemId);
-        if(t) await saveTask(t.id);
-      } else {
-        setContasDetalhadas(prev => prev.map(c => c.id === itemId ? { ...c, datavencimento: dateStr } : c));
-        const c = contasDetalhadas.find(x=>x.id===itemId);
-        if(c) await saveContaDetalhada(c.id);
-      }
-      setShowDatePicker(null);
-    };
-
-    return (
-      <div style={{
-        position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid #ddd',
-        borderRadius: 12, padding: 12, boxShadow: '0 8px 25px rgba(0,0,0,.12)', zIndex: 100, fontSize: 13
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
-          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
-            <div key={d} style={{ textAlign: 'center', fontWeight: 600, color: '#666' }}>{d}</div>
-          ))}
-          {Array.from({ length: daysInMonth }, (_, i) => {
-            const day = i + 1;
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            return (
-              <div
-                key={day}
-                style={{
-                  textAlign: 'center', padding: '6px 4px', cursor: 'pointer', borderRadius: 8,
-                  background: currentDate === dateStr ? '#C1D9C1' : 'transparent',
-                  color: currentDate === dateStr ? '#000' : '#333',
-                  fontWeight: currentDate === dateStr ? 600 : 400
-                }}
-                onClick={() => setDate(dateStr)}
-              >
-                {day}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
+    const num = parseInt(val.replace(/\D/g, ''), 10);
+    setCompras(prev => prev.map(c => c.id === id ? { ...c, quantidade: num || 1 } : c));
   };
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
-    if(!userIdDebug) return;
+    if (!userIdDebug) return;
     try {
-        const res = await fetch(`${API_URL}/grupo`, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({nome:groupName, descricao:groupDescription, group_owner:userIdDebug})
-        });
-        const data = await res.json();
-        if(!res.ok) { alert(data.detail); return; }
-        const g = data.data;
-        await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, {method:'PATCH'});
-        const newG = {id: g.id, name: g.nome, icon:'/planta.png'};
-        setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false); setShowInviteCode(true);
-        setGeneratedCode(String(g.cod_convite));
-    } catch(e) { console.error(e); }
+      const res = await fetch(`${API_URL}/grupo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: groupName, descricao: groupDescription, group_owner: userIdDebug })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      const g = data.data;
+      await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, { method: 'PATCH' });
+      const newG = { id: g.id, name: g.nome, icon: '/planta.png' };
+      setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false); setShowInviteCode(true);
+      setGeneratedCode(String(g.cod_convite));
+    } catch (e) { console.error(e); }
   };
   const handleJoinWithInvite = async (e) => {
     e.preventDefault();
-    if(!inviteCode) return;
+    if (!inviteCode) return;
     try {
-        const res = await fetch(`${API_URL}/grupo/codigo/${inviteCode}`);
-        const data = await res.json();
-        if(!res.ok) { alert(data.detail); return; }
-        const g = data.data;
-        await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, {method:'PATCH'});
-        const newG = {id: g.id, name: g.nome, icon:'/planta.png'};
-        setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false);
-    } catch(e){ console.error(e); }
+      const res = await fetch(`${API_URL}/grupo/codigo/${inviteCode}`);
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      const g = data.data;
+      await fetch(`${API_URL}/usuario/${userIdDebug}/grupo?grupo_id=${g.id}`, { method: 'PATCH' });
+      const newG = { id: g.id, name: g.nome, icon: '/planta.png' };
+      setGroups([newG]); setSelectedGroup(newG); setShowCreateGroup(false);
+    } catch (e) { console.error(e); }
   };
   const closePopups = () => { setShowCreateGroup(false); setShowInviteCode(false); };
-  const handleCopy = () => { navigator.clipboard.writeText(generatedCode); setCopied(true); setTimeout(()=>setCopied(false), 5000); };
-  const openContextMenu = (e, g) => { e.preventDefault(); setContextMenu({x:e.clientX,y:e.clientY,groupId:g.id}); };
+  const handleCopy = () => { navigator.clipboard.writeText(generatedCode); setCopied(true); setTimeout(() => setCopied(false), 5000); };
+  const openContextMenu = (e, g) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, groupId: g.id }); };
   const startRename = (g) => { setEditingGroupId(g.id); setEditName(g.name); setContextMenu(null); };
-  const saveRename = () => { setGroups(p=>p.map(g=>g.id===editingGroupId?{...g,name:editName}:g)); setEditingGroupId(null); };
-  const deleteGroup = async () => { 
-      await fetch(`${API_URL}/grupo/${contextMenu.groupId}`, {method:'DELETE'});
-      setGroups([]); setSelectedGroup(null); setShowCreateGroup(true); setContextMenu(null);
+  const saveRename = () => { setGroups(p => p.map(g => g.id === editingGroupId ? { ...g, name: editName } : g)); setEditingGroupId(null); };
+  const deleteGroup = async () => {
+    await fetch(`${API_URL}/grupo/${contextMenu.groupId}`, { method: 'DELETE' });
+    setGroups([]); setSelectedGroup(null); setShowCreateGroup(true); setContextMenu(null);
   };
 
   // Função para mostrar o código de convite atual do grupo
@@ -1144,7 +1236,7 @@ export default function TelaGrupo() {
 
               <ul className="menu">
                 <li><FiSettings /> Configurações</li>
-                
+
                 {/* ITEM DE NOTIFICAÇÕES ATUALIZADO */}
                 <li onClick={() => { setShowNotifications(true); setHasUnread(false); }} style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1225,7 +1317,7 @@ export default function TelaGrupo() {
                         </div>
                         <span>
                           {groupMembers.total_usuarios > 0
-                            ? `${groupMembers.total_usuarios} membro${groupMembers.total_usuarios > 1 ? 's' : ''} do grupo`
+                            ? `${groupMembers.total_usuarios} pessoa${groupMembers.total_usuarios !== 1 ? 's' : ''} ${groupMembers.total_usuarios !== 1 ? 'estão' : 'está'} nesse grupo`
                             : 'Membros do grupo'}
                         </span>
                       </div>
@@ -1233,42 +1325,7 @@ export default function TelaGrupo() {
                   </div>
 
                   {/* CONTAS (DASHBOARD) - PREENCHIDO PELO CALCULAR DASHBOARD */}
-                  <section className="dashboard">
-                    <h3>Dashboard Financeiro</h3>
-                    <div className="total-container">
-                      <div className="total-value">R$ {formatCurrency(totalContas)}</div>
-                      <div className="total-label">Montante total do mês</div>
-                    </div>
 
-                    <div className="bar-container">
-                      <div className="bar">
-                        {contas.map(c => c.valor > 0 && (
-                          <div
-                            key={c.id}
-                            className="bar-segment"
-                            style={{
-                              backgroundColor: c.cor,
-                              flex: `${c.valor} 1 0`,
-                              minWidth: totalContas > 0 ? '10px' : '0'
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <ul className="lista-contas">
-                      {contas.map(c => (
-                        <li key={c.id} className="conta-item">
-                          <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
-                          {/* Nome fixo no dashboard */}
-                          <span className="conta-nome">{c.nome}</span>
-                          <span className="conta-input valor-input">
-                             R$ {c.valor > 0 ? formatCurrency(c.valor) : '0,00'}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
 
                   {/* TAREFAS */}
                   <section className="dashboard">
@@ -1337,12 +1394,12 @@ export default function TelaGrupo() {
                                 <div
                                   className={`tag-display ${!t.status || t.status === 'Não começou' ? 'empty' : ''}`}
                                   style={{
-                                    backgroundColor: (!t.status || t.status === 'Não começou') ? '#f3f4f6' : 
-                                      t.status === 'Concluída' ? '#d5f5e3' : 
-                                      t.status === 'Em andamento' ? '#fef3c7' : '#e5e7eb',
-                                    color: (!t.status || t.status === 'Não começou') ? '#9ca3af' : 
-                                      t.status === 'Concluída' ? '#2e7d32' : 
-                                      t.status === 'Em andamento' ? '#d97706' : '#4b5563'
+                                    backgroundColor: (!t.status || t.status === 'Não começou') ? '#f3f4f6' :
+                                      t.status === 'Concluída' ? '#d5f5e3' :
+                                        t.status === 'Em andamento' ? '#fef3c7' : '#e5e7eb',
+                                    color: (!t.status || t.status === 'Não começou') ? '#9ca3af' :
+                                      t.status === 'Concluída' ? '#2e7d32' :
+                                        t.status === 'Em andamento' ? '#d97706' : '#4b5563'
                                   }}
                                   onClick={() => cycleStatus(t.id)}
                                 >
@@ -1365,14 +1422,47 @@ export default function TelaGrupo() {
                                 <div
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowDatePicker(showDatePicker === t.id ? null : t.id);
+                                    if (showDatePicker === t.id) {
+                                      setShowDatePicker(null);
+                                      setAnchorEl(null);
+                                    } else {
+                                      setShowDatePicker(t.id);
+                                      setAnchorEl(e.currentTarget);
+                                    }
                                   }}
-                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }}
                                 >
                                   <FiCalendar />
                                   {t.data || 'Selecionar'}
+                                  {showDatePicker === t.id && (
+                                    <DatePicker
+                                      initialDate={t.data}
+                                      anchorEl={anchorEl}
+                                      onSelect={async (dateStr) => {
+                                        setTarefas(prev => prev.map(task => task.id === t.id ? { ...task, data: dateStr } : task));
+                                        setShowDatePicker(null);
+                                        setAnchorEl(null);
+                                        try {
+                                          await fetch(`${API_URL}/tarefa/${t.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              titulo: t.descricao,
+                                              descricao: t.descricao,
+                                              datavencimento: dateStr,
+                                              prioridade: mapPriorityToInt(t.prioridade),
+                                              status: t.checked,
+                                              recorrente: false,
+                                              responsavel: 1,
+                                              grupo_id: Number(selectedGroup.id)
+                                            })
+                                          });
+                                        } catch (e) { console.error(e); }
+                                      }}
+                                      onClose={() => { setShowDatePicker(null); setAnchorEl(null); }}
+                                    />
+                                  )}
                                 </div>
-                                {showDatePicker === t.id && renderDatePicker(t.id, t.data, true)}
                               </td>
                               <td>
                                 <img src={t.responsavel} alt="resp" className="resp" />
@@ -1386,6 +1476,44 @@ export default function TelaGrupo() {
                       </table>
                     </div>
                     <div className="add-row" onClick={addTask}><FiPlus style={{ fontSize: '18px' }} /></div>
+                  </section>
+
+                  {/* CONTAS (DASHBOARD) - PREENCHIDO PELO CALCULAR DASHBOARD */}
+                  <section className="dashboard">
+                    <h3>Dashboard Financeiro</h3>
+                    <div className="total-container">
+                      <div className="total-value">R$ {formatCurrency(totalContas)}</div>
+                      <div className="total-label">Montante total do mês</div>
+                    </div>
+
+                    <div className="bar-container">
+                      <div className="bar">
+                        {contas.map(c => c.valor > 0 && (
+                          <div
+                            key={c.id}
+                            className="bar-segment"
+                            style={{
+                              backgroundColor: c.cor,
+                              flex: `${c.valor} 1 0`,
+                              minWidth: totalContas > 0 ? '10px' : '0'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="lista-contas">
+                      {contas.map(c => (
+                        <li key={c.id} className="conta-item">
+                          <span className="bolinha" style={{ backgroundColor: c.cor }}></span>
+                          {/* Nome fixo no dashboard */}
+                          <span className="conta-nome">{c.nome}</span>
+                          <span className="conta-input valor-input">
+                            R$ {c.valor > 0 ? formatCurrency(c.valor) : '0,00'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </section>
 
                   {/* LISTA DE CONTAS DETALHADA */}
@@ -1495,14 +1623,47 @@ export default function TelaGrupo() {
                                 <div
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowDatePicker(showDatePicker === c.id ? null : c.id);
+                                    if (showDatePicker === c.id) {
+                                      setShowDatePicker(null);
+                                      setAnchorEl(null);
+                                    } else {
+                                      setShowDatePicker(c.id);
+                                      setAnchorEl(e.currentTarget);
+                                    }
                                   }}
-                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }}
                                 >
                                   <FiCalendar />
                                   {c.datavencimento || 'Selecionar'}
+                                  {showDatePicker === c.id && (
+                                    <DatePicker
+                                      initialDate={c.datavencimento}
+                                      anchorEl={anchorEl}
+                                      onSelect={async (dateStr) => {
+                                        setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, datavencimento: dateStr } : item));
+                                        setShowDatePicker(null);
+                                        setAnchorEl(null);
+                                        try {
+                                          await fetch(`${API_URL}/conta/${c.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              descricao: c.descricao,
+                                              valor: c.valor,
+                                              datavencimento: dateStr,
+                                              status: c.status,
+                                              categoria: c.categoria,
+                                              recorrente: c.recorrente,
+                                              resp: 1,
+                                              grupo_id: Number(selectedGroup.id)
+                                            })
+                                          });
+                                        } catch (e) { console.error(e); }
+                                      }}
+                                      onClose={() => { setShowDatePicker(null); setAnchorEl(null); }}
+                                    />
+                                  )}
                                 </div>
-                                {showDatePicker === c.id && renderDatePicker(c.id, c.datavencimento, false)}
                               </td>
 
                               <td>
@@ -1513,8 +1674,8 @@ export default function TelaGrupo() {
                                     color: c.recorrente ? '#166534' : '#b91c1c',
                                   }}
                                   onClick={() => {
-                                     const newValue = !c.recorrente;
-                                     setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: newValue } : item));
+                                    const newValue = !c.recorrente;
+                                    setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: newValue } : item));
                                   }}
                                 >
                                   {c.recorrente ? 'Sim' : 'Não'}
@@ -1773,48 +1934,48 @@ export default function TelaGrupo() {
 
       {/* POPUP: SELEÇÃO DE AVATAR (NOVO) */}
       {showAvatarModal && (
-        <div className="overlay" style={{zIndex: 10001}}>
-            <div className="popup-card" style={{maxWidth: '500px', textAlign: 'center'}}>
-                <h2 className="popup-title">Bem-vindo(a) ao JabutiLar! 🐢</h2>
-                <p style={{color: '#666', marginBottom: '20px'}}>
-                    Para começar, escolha um avatar que combine com você.
-                </p>
-                
-                <div className="avatar-grid">
-                    {/* Usando os assets existentes na pasta public */}
-                    <img src="/p1.png" className={`avatar-option ${userProfile.image === '/p1.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p1.png')} />
-                    <img src="/p2.png" className={`avatar-option ${userProfile.image === '/p2.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p2.png')} />
-                    <img src="/p3.png" className={`avatar-option ${userProfile.image === '/p3.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p3.png')} />
-                    <img src="/p4.png" className={`avatar-option ${userProfile.image === '/p4.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p4.png')} />
-                    
-                    {/* Opções extras (repetidas para exemplo de grade) */}
-                    <img src="/p1.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p1.png')} />
-                    <img src="/p2.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p2.png')} />
-                    <img src="/p3.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p3.png')} />
-                    <img src="/p4.png" style={{filter: 'hue-rotate(90deg)'}} className="avatar-option" onClick={() => handleSelectAvatar('/p4.png')} />
-                </div>
-                
-                <button 
-                    className="submitButton" 
-                    style={{marginTop: '30px'}}
-                    onClick={() => handleSelectAvatar(userProfile.image)}
-                >
-                    <span>Confirmar Escolha</span>
-                </button>
+        <div className="overlay" style={{ zIndex: 10001 }}>
+          <div className="popup-card" style={{ maxWidth: '500px', textAlign: 'center' }}>
+            <h2 className="popup-title">Bem-vindo(a) ao JabutiLar! 🐢</h2>
+            <p style={{ color: '#666', marginBottom: '20px' }}>
+              Para começar, escolha um avatar que combine com você.
+            </p>
+
+            <div className="avatar-grid">
+              {/* Usando os assets existentes na pasta public */}
+              <img src="/p1.png" className={`avatar-option ${userProfile.image === '/p1.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p1.png')} />
+              <img src="/p2.png" className={`avatar-option ${userProfile.image === '/p2.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p2.png')} />
+              <img src="/p3.png" className={`avatar-option ${userProfile.image === '/p3.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p3.png')} />
+              <img src="/p4.png" className={`avatar-option ${userProfile.image === '/p4.png' ? 'selected' : ''}`} onClick={() => handleSelectAvatar('/p4.png')} />
+
+              {/* Opções extras (repetidas para exemplo de grade) */}
+              <img src="/p1.png" style={{ filter: 'hue-rotate(90deg)' }} className="avatar-option" onClick={() => handleSelectAvatar('/p1.png')} />
+              <img src="/p2.png" style={{ filter: 'hue-rotate(90deg)' }} className="avatar-option" onClick={() => handleSelectAvatar('/p2.png')} />
+              <img src="/p3.png" style={{ filter: 'hue-rotate(90deg)' }} className="avatar-option" onClick={() => handleSelectAvatar('/p3.png')} />
+              <img src="/p4.png" style={{ filter: 'hue-rotate(90deg)' }} className="avatar-option" onClick={() => handleSelectAvatar('/p4.png')} />
             </div>
+
+            <button
+              className="submitButton"
+              style={{ marginTop: '30px' }}
+              onClick={() => handleSelectAvatar(userProfile.image)}
+            >
+              <span>Confirmar Escolha</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* POPUP: NOTIFICAÇÕES (NOVO) */}
       {showNotifications && (
-        <div className="overlay" onClick={() => setShowNotifications(false)} style={{zIndex: 10002}}>
+        <div className="overlay" onClick={() => setShowNotifications(false)} style={{ zIndex: 10002 }}>
           <div className="popup-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 className="popup-title" style={{ margin: 0, fontSize: '22px', textAlign: 'left' }}>
                 Notificações
               </h2>
               {notifications.length > 0 && (
-                <span 
+                <span
                   onClick={clearNotifications}
                   style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}
                 >
@@ -1826,13 +1987,13 @@ export default function TelaGrupo() {
             <div className="notif-list">
               {notifications.length === 0 ? (
                 <div className="empty-state">
-                  <FiBell style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.3 }} /><br/>
+                  <FiBell style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.3 }} /><br />
                   Nenhuma nova notificação
                 </div>
               ) : (
                 notifications.map((n) => (
                   <div key={n.id} className="notif-item">
-                    <div 
+                    <div
                       className="notif-icon-box"
                       style={{
                         backgroundColor: n.tipo === 'tarefa' ? '#dbeafe' : n.type === 'compra' ? '#fee2e2' : '#f3e8ff',
@@ -1851,9 +2012,9 @@ export default function TelaGrupo() {
                 ))
               )}
             </div>
-            
-            <button 
-              className="submitButton" 
+
+            <button
+              className="submitButton"
               style={{ marginTop: '24px', padding: '12px 0' }}
               onClick={() => setShowNotifications(false)}
             >
