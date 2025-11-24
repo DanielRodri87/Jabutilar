@@ -227,3 +227,40 @@ def atualizar_avatar_usuario(id_user: str, req: AvatarUpdate):
     except Exception as e:
         logger.error(f"Erro ao atualizar avatar: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+def contar_usuarios_no_grupo(grupo_id: int) -> dict:
+    """
+    Conta quantos usuários estão vinculados a um grupo específico
+    e retorna também o profile_image (campo 'image') de cada usuário.
+    """
+    try:
+        logger.info(f"Contando usuários no grupo ID: {grupo_id} e buscando profile_image")
+        response = (
+            supabase
+            .table("user_data")
+            .select("id_auth, image", count="exact")
+            .eq("id_group", grupo_id)
+            .execute()
+        )
+
+        total_usuarios = response.count if response.count is not None else 0
+
+        # Extrai as imagens de perfil (podem ser None se o usuário não tiver)
+        profile_images = []
+        if response.data:
+            profile_images = [row.get("image") for row in response.data]
+
+        logger.info(
+            f"Total de usuários no grupo {grupo_id}: {total_usuarios}. "
+            f"Imagens coletadas: {len(profile_images)}"
+        )
+
+        return {
+            "total_usuarios": total_usuarios,
+            "profile_images": profile_images,
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao contar usuários no grupo {grupo_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
