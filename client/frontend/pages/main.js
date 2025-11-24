@@ -466,13 +466,13 @@ export default function TelaGrupo() {
   // ================== DASHBOARD ==================
   const calcularDashboard = () => {
     const categoriasMap = {
-      'Energia': { id: 1, cor: '#F59E0B', valor: 0 },
-      'Água': { id: 2, cor: '#3B82F6', valor: 0 },
-      'Internet': { id: 3, cor: '#8B5CF6', valor: 0 },
-      'Aluguel': { id: 4, cor: '#EF4444', valor: 0 },
-      'Alimentação': { id: 5, cor: '#10B981', valor: 0 },
-      'Limpeza': { id: 7, cor: '#EC4899', valor: 0 },
-      'Outros': { id: 6, cor: '#9CA3AF', valor: 0 },
+      'Energia': { id: 1, cor: '#91B6E4', valor: 0 },
+      'Água': { id: 2, cor: '#E4A87B', valor: 0 },
+      'Internet': { id: 3, cor: '#B57BE4', valor: 0 },
+      'Aluguel': { id: 4, cor: '#A0BF9F', valor: 0 },
+      'Alimentação': { id: 5, cor: '#9BBFC0', valor: 0 },
+      'Limpeza': { id: 7, cor: '#D49191', valor: 0 },
+      'Outros': { id: 6, cor: '#F5CF88', valor: 0 },
     };
     contasDetalhadas.forEach(c => {
       let cat = c.categoria || 'Outros';
@@ -904,7 +904,7 @@ export default function TelaGrupo() {
   const cycleCategoriaConta = (id) => {
     setContasDetalhadas(prev => prev.map(c => {
       if (c.id !== id) return c;
-      const order = ['Energia', 'Água', 'Internet', 'Aluguel', 'Outros'];
+      const order = ['Energia', 'Água', 'Internet', 'Aluguel', 'Alimentação', 'Limpeza', 'Outros'];
       return { ...c, categoria: order[(order.indexOf(c.categoria) + 1) % order.length] };
     }));
   };
@@ -1706,7 +1706,7 @@ export default function TelaGrupo() {
                         </colgroup>
                         <thead>
                           <tr>
-                            {['Check', 'Produto', 'Tipo', 'Qtd', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
+                            {['Check', 'Produto', 'Tipo', 'Quantidade', 'Valor', 'Prioridade', 'Responsável'].map((label, i) => (
                               <th key={i}>
                                 <div className="th-label">
                                   {i === 0 && <FiCheck />}
