@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List, Optional
 from .social_auth import process_social_callback
 
 from .schemas import (
@@ -13,10 +14,13 @@ from .schemas import (
     GrupoBase,
     ContasBase,
     SocialAuthRequest,
-    AvatarUpdate
+    AvatarUpdate,
+    NotificacaoCreate,
+    NotificacaoResponse
 )
 from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario, atualizar_avatar_usuario
 from .social_auth import get_oauth_url, login_social 
+from .notificacoes import criar_notificacao, listar_notificacoes, deletar_todas_notificacoes
 
 from .item_compra import (
     criar_item_compra,
@@ -244,3 +248,26 @@ def atualizar_dados_conta(conta_id: int, conta: ContasBase):
 def excluir_dados_conta(conta_id: int):
     """Excluir uma conta existente"""
     return deletar_conta(conta_id)
+@app.delete("/conta/{conta_id}", response_model=dict, tags=["Conta"])
+def excluir_dados_conta(conta_id: int):
+    """Excluir uma conta existente"""
+    return deletar_conta(conta_id)
+
+
+@app.post("/notificacao", response_model=dict, tags=["Notificações"])
+def endpoint_criar_notificacao(notif: NotificacaoCreate):
+    """Cria uma nova notificação de atividade no grupo"""
+    return criar_notificacao(notif)
+
+@app.get("/notificacao/{grupo_id}", response_model=List[NotificacaoResponse], tags=["Notificações"])
+def endpoint_listar_notificacoes(grupo_id: int):
+    """
+    Lista as notificações recentes do grupo.
+    Retorna sempre uma lista (pode ser vazia), nunca None.
+    """
+    return listar_notificacoes(grupo_id)
+
+@app.delete("/notificacao/{grupo_id}", tags=["Notificações"])
+def endpoint_limpar_notificacoes(grupo_id: int):
+    """Apaga todas as notificações de um grupo específico"""
+    return deletar_todas_notificacoes(grupo_id)

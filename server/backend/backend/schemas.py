@@ -92,3 +92,19 @@ class ContasBase(BaseModel):
     grupo_id: int
     created_at: Optional[datetime] = None
     update_at: Optional[datetime] = None
+
+# ==================== Notificacoes ====================
+class NotificacaoBase(BaseModel):
+    grupo_id: int
+    mensagem: str
+    tipo: str  # 'tarefa', 'compra', 'conta'
+
+class NotificacaoCreate(NotificacaoBase):
+    pass
+
+class NotificacaoResponse(NotificacaoBase):
+    id: int
+    created_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
