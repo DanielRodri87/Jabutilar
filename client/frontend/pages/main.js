@@ -18,6 +18,88 @@ export default function TelaGrupo() {
   const [compras, setCompras] = useState([]);
   const [contasDetalhadas, setContasDetalhadas] = useState([]);
 
+  // === ESTADOS DE NOTIFICAÇÕES (MULTI-USUÁRIO) ===
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  // Função para buscar notificações no servidor
+  const fetchNotifications = async (groupId) => {
+    if (!groupId) return;
+    try {
+      const res = await fetch(`${API_URL}/notificacao/${groupId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const formatted = data.map(n => ({
+            ...n,
+            time: new Date(n.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        }));
+
+        setNotifications(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(formatted)) {
+                if (formatted.length > prev.length) setHasUnread(true);
+                return formatted;
+            }
+            return prev;
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao buscar notificações", e);
+    }
+  };
+
+  // POLLING
+  useEffect(() => {
+    let interval;
+    if (selectedGroup?.id) {
+        fetchNotifications(selectedGroup.id);
+        interval = setInterval(() => {
+            fetchNotifications(selectedGroup.id);
+        }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [selectedGroup]);
+
+
+  // Função auxiliar para CRIAR notificação no servidor
+  const addNotification = async (message, type) => {
+    if (!selectedGroup) return;
+    
+    // UI Otimista
+    const tempNotif = {
+        id: Date.now(),
+        mensagem: message,
+        tipo: type,
+        created_at: new Date().toISOString(),
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+    setNotifications(prev => [tempNotif, ...prev]);
+
+    try {
+        await fetch(`${API_URL}/notificacao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                grupo_id: Number(selectedGroup.id),
+                mensagem: message,
+                tipo: type
+            })
+        });
+    } catch (e) {
+        console.error("Erro ao enviar notificação", e);
+    }
+  };
+
+  // Função para LIMPAR notificações
+  const clearNotifications = async () => {
+    if (!selectedGroup) return;
+    setNotifications([]);
+    setHasUnread(false);
+    try {
+        await fetch(`${API_URL}/notificacao/${selectedGroup.id}`, { method: 'DELETE' });
+    } catch (e) { console.error("Erro ao limpar notificações", e); }
+  };
+
   // Dashboard
   const [contas, setContas] = useState([
     { id: 1, nome: 'Energia', valor: 0, cor: '#E4A87B' },
@@ -33,7 +115,7 @@ export default function TelaGrupo() {
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
 
-  // === ESTADOS DO PERFIL E AVATAR (MODIFICADO) ===
+  // === ESTADOS DO PERFIL E AVATAR ===
   const [userIdDebug, setUserIdDebug] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [userProfile, setUserProfile] = useState({ name: 'Jabuti de lago', image: '/p1.png' });
@@ -42,7 +124,7 @@ export default function TelaGrupo() {
   // === REDIMENSIONAMENTO DE COLUNAS ===
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
-    compras: [50, 200, 110, 60, 100, 110, 70], // Check, Prod, Tipo, Qtd, Valor, Prio, Resp
+    compras: [50, 200, 110, 60, 100, 110, 70],
     contas:  [50, 220, 130, 100, 120, 120, 70],
   });
   const isResizing = useRef(null);
@@ -101,105 +183,75 @@ export default function TelaGrupo() {
 
   useEffect(() => {
     if (selectedGroup && selectedGroup.id) {
-      // sempre que o grupo muda, zera listas antigas para não "vazar" dados
       setTarefas([]);
       setCompras([]);
       setContasDetalhadas([]);
-      // zera o dashboard imediatamente
+      setNotifications([]); 
       calcularDashboard();
 
       fetchTarefas(selectedGroup.id);
       fetchCompras(selectedGroup.id);
       fetchContas(selectedGroup.id);
     } else {
-      // se não houver grupo selecionado, limpa tudo
       setTarefas([]);
       setCompras([]);
       setContasDetalhadas([]);
-      // zera dashboard quando não há grupo
+      setNotifications([]);
       calcularDashboard();
     }
   }, [selectedGroup]);
 
-  // recalcular dashboard quando listas mudarem OU quando o grupo mudar
   useEffect(() => {
     if (!selectedGroup) return;
     calcularDashboard();
   }, [compras, contasDetalhadas, selectedGroup]);
 
-  // ================== DETECÇÃO DE LOGIN SOCIAL / AVATAR (NOVO) ==================
+  // ================== LOGIN SOCIAL / AVATAR ==================
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Verificar se deve mostrar o seletor de perfil (vindo do callback do Facebook ou flag de URL)
     const params = new URLSearchParams(window.location.search);
     const isNew = params.get('new') === 'true';
     const storageShow = sessionStorage.getItem('show_profile_selector') === 'true';
     
-    // Se for novo login OU se a imagem atual for a padrão genérica
     if (isNew || storageShow || (userProfile.image === '/fotodeperfil.png')) {
         setShowAvatarModal(true);
-        // Limpar a flag para não mostrar novamente no refresh
         sessionStorage.removeItem('show_profile_selector');
-        
-        // Limpar a query string 'new=true' da URL sem recarregar a página
         if (isNew) {
             const newUrl = window.location.pathname + window.location.search.replace(/[\?&]new=true/, '');
             window.history.replaceState({}, '', newUrl);
         }
     }
-  }, [userProfile.image]); // Dependência na imagem atual
+  }, [userProfile.image]); 
 
-  // Função para salvar o avatar escolhido
   const handleSelectAvatar = async (avatarUrl) => {
-    // 1. Atualizar estado visual imediato (Feedback Rápido)
     setUserProfile(prev => ({ ...prev, image: avatarUrl }));
     setShowAvatarModal(false);
-
     try {
-        // 2. Persistir localmente
         const extra = JSON.parse(sessionStorage.getItem('user_extra') || '{}');
         extra.image = avatarUrl;
-        
         const extraString = JSON.stringify(extra);
         sessionStorage.setItem('user_extra', extraString);
         localStorage.setItem('user_extra', extraString);
         
-        // 3. SALVAR NO BACKEND (A Correção Principal)
         if (userIdDebug) {
-            const response = await fetch(`${API_URL}/usuario/${userIdDebug}/avatar`, {
-                method: 'PATCH', // Usando PATCH pois é uma atualização parcial
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
+            await fetch(`${API_URL}/usuario/${userIdDebug}/avatar`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: avatarUrl })
             });
-
-            if (!response.ok) {
-                console.error("Erro ao salvar avatar no servidor:", await response.text());
-            } else {
-                console.log("Avatar salvo com sucesso no banco de dados.");
-            }
         }
-
-    } catch (e) {
-        console.error("Erro ao processar a escolha do avatar", e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const fetchTarefas = async (groupId) => {
     try {
-      // filtra tarefas pelo grupo atual
       const res = await fetch(`${API_URL}/tarefa?id_group=${groupId}`);
       const data = await res.json();
       if (data.data) {
-        // filtro de segurança no frontend caso o backend ainda retorne outras tarefas
         const onlyCurrentGroup = data.data.filter(t => {
-          // o backend salva em group_id; alguns clients antigos podem ter grupo_id
           const gid = t.group_id ?? t.grupo_id;
           return Number(gid) === Number(groupId);
         });
-
         const mapped = onlyCurrentGroup.map(t => ({
           id: t.id,
           descricao: t.titulo,
@@ -211,9 +263,7 @@ export default function TelaGrupo() {
           editing: false
         }));
         setTarefas(mapped);
-      } else {
-        setTarefas([]);
-      }
+      } else { setTarefas([]); }
     } catch (e) { console.error("Erro tarefas", e); }
   };
 
@@ -259,7 +309,7 @@ export default function TelaGrupo() {
     } catch (e) { console.error("Erro contas", e); }
   };
 
-  // ================== LÓGICA DO DASHBOARD ==================
+  // ================== DASHBOARD ==================
   const calcularDashboard = () => {
     const categoriasMap = {
       'Energia': { id: 1, cor: '#F59E0B', valor: 0 },
@@ -270,31 +320,24 @@ export default function TelaGrupo() {
       'Limpeza': { id: 7, cor: '#EC4899', valor: 0 },
       'Outros': { id: 6, cor: '#9CA3AF', valor: 0 },
     };
-
-    // Somar Contas
     contasDetalhadas.forEach(c => {
       let cat = c.categoria || 'Outros';
       if (!categoriasMap[cat]) cat = 'Outros';
       categoriasMap[cat].valor += Number(c.valor || 0);
     });
-
-    // Somar Compras (Valor * Quantidade)
     compras.forEach(c => {
       let cat = c.tipo || 'Outros';
       if (cat === 'Comida') cat = 'Alimentação';
       if (!categoriasMap[cat]) cat = 'Outros';
-      
       const totalItem = Number(c.valor || 0) * Number(c.quantidade || 1);
       categoriasMap[cat].valor += totalItem;
     });
-
     const novoDashboard = Object.keys(categoriasMap).map(key => ({
       id: categoriasMap[key].id,
       nome: key,
       valor: categoriasMap[key].valor,
       cor: categoriasMap[key].cor
     }));
-
     setContas(novoDashboard);
   };
 
@@ -316,7 +359,7 @@ export default function TelaGrupo() {
             status: true,
             recorrente: false,
             responsavel: 1,
-            grupo_id: Number(selectedGroup.id)   // garantir vínculo ao marcar concluída
+            grupo_id: Number(selectedGroup.id)
           })
         });
       } catch(e) { console.error(e); }
@@ -400,7 +443,7 @@ export default function TelaGrupo() {
           status: false,
           recorrente: false,
           responsavel: 1,
-          grupo_id: Number(selectedGroup.id)      // << referenciar grupo
+          grupo_id: Number(selectedGroup.id)
         })
       });
       const data = await res.json();
@@ -415,7 +458,8 @@ export default function TelaGrupo() {
           data: t.datavencimento,
           responsavel: '/p1.png',
           editing: true,
-          checked: false
+          checked: false,
+          isNew: true 
         }]);
         setEditingTask(t.id);
       }
@@ -425,8 +469,14 @@ export default function TelaGrupo() {
   const saveTask = async (id) => {
     const t = tarefas.find(x => x.id === id);
     if (!t) return;
-    setTarefas(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+
+    if (t.isNew) {
+      await addNotification(`Nova tarefa criada: "${t.descricao}"`, 'tarefa');
+    }
+
+    setTarefas(prev => prev.map(item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingTask(null);
+    
     await fetch(`${API_URL}/tarefa/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -438,7 +488,7 @@ export default function TelaGrupo() {
         status: t.checked,
         recorrente: false,
         responsavel: 1,
-        grupo_id: Number(selectedGroup.id)      // << manter vínculo ao atualizar
+        grupo_id: Number(selectedGroup.id)
       })
     });
   };
@@ -471,7 +521,8 @@ export default function TelaGrupo() {
           quantidade: 1,
           responsavel: '/p1.png',
           editing: true,
-          checked: false
+          checked: false,
+          isNew: true
         }]);
         setEditingCompra(c.id);
       }
@@ -481,8 +532,14 @@ export default function TelaGrupo() {
   const saveCompra = async (id) => {
     const c = compras.find(x => x.id === id);
     if (!c) return;
-    setCompras(prev => prev.map (item => item.id === id ? { ...item, editing: false } : item));
+    
+    if (c.isNew) {
+      await addNotification(`Novo item na lista: "${c.produto}"`, 'compra');
+    }
+
+    setCompras(prev => prev.map (item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingCompra(null);
+    
     await fetch(`${API_URL}/itens-compra/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -527,7 +584,8 @@ export default function TelaGrupo() {
           datavencimento: c.datavenc,
           recorrente: false,
           responsavel: '/p1.png',
-          editing: true
+          editing: true,
+          isNew: true
         }]);
         setEditingConta(c.id);
       }
@@ -537,8 +595,14 @@ export default function TelaGrupo() {
   const saveContaDetalhada = async (id) => {
     const c = contasDetalhadas.find(x => x.id === id);
     if (!c) return;
-    setContasDetalhadas(prev => prev.map(item => item.id === id ? { ...item, editing: false } : item));
+
+    if (c.isNew) {
+      await addNotification(`Nova conta registrada: "${c.descricao}"`, 'conta');
+    }
+
+    setContasDetalhadas(prev => prev.map(item => item.id === id ? { ...item, editing: false, isNew: false } : item));
     setEditingConta(null);
+    
     await fetch(`${API_URL}/conta/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -598,7 +662,6 @@ export default function TelaGrupo() {
     setUserIdDebug(uid);
     try {
        const extra = JSON.parse(sessionStorage.getItem('user_extra') || localStorage.getItem('user_extra') || '{}');
-       // Se tiver name/image, usa. Se não, usa defaults.
        setUserProfile(prev => ({
            ...prev,
            name: extra.name || prev.name,
@@ -617,13 +680,11 @@ export default function TelaGrupo() {
            const gid = (uData.data || uData).id_group;
            if(!gid) { 
              setShowCreateGroup(true); 
-             // novo usuário sem grupo: limpa dados
              setGroups([]);
              setSelectedGroup(null);
              setTarefas([]);
              setCompras([]);
              setContasDetalhadas([]);
-             // zera dashboard para o novo usuário
              calcularDashboard();
              setInitialLoading(false); 
              return; 
@@ -634,11 +695,9 @@ export default function TelaGrupo() {
                const g = { id: gData.data.id, name: gData.data.nome, icon: '/planta.png' };
                setGroups([g]); 
                setSelectedGroup(g);
-               // ao trocar de grupo via backend (outro usuário/conta), zera as listas
                setTarefas([]);
                setCompras([]);
                setContasDetalhadas([]);
-               // zera dashboard para não mostrar dados do usuário anterior
                calcularDashboard();
                setShowCreateGroup(false);
            }
@@ -951,6 +1010,69 @@ export default function TelaGrupo() {
             border-color: #667467;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
+
+        /* ESTILOS DE NOTIFICAÇÃO (NOVO) */
+        .notification-badge {
+          width: 8px;
+          height: 8px;
+          background-color: #ef4444; /* Vermelho alerta */
+          border-radius: 50%;
+          margin-left: auto; /* Empurra para a direita */
+          box-shadow: 0 0 0 2px #fff;
+        }
+        .notif-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-height: 400px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+        .notif-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: #fff;
+          border-radius: 12px;
+          border: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+        .notif-item:hover {
+          border-color: #C1D9C1;
+          background: #fafafa;
+          transform: translateX(2px);
+        }
+        .notif-icon-box {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .notif-content {
+          flex: 1;
+        }
+        .notif-text {
+          font-size: 14px;
+          color: #1f2937;
+          font-weight: 500;
+          margin-bottom: 2px;
+        }
+        .notif-time {
+          font-size: 11px;
+          color: #9ca3af;
+        }
+        .empty-state {
+          text-align: center;
+          color: #9ca3af;
+          padding: 40px 0;
+          font-size: 14px;
+        }
+        .notif-list::-webkit-scrollbar { width: 4px; }
+        .notif-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
       `}</style>
 
       <div className="container">
@@ -968,7 +1090,15 @@ export default function TelaGrupo() {
 
               <ul className="menu">
                 <li><FiSettings /> Configurações</li>
-                <li><FiBell /> Notificações</li>
+                
+                {/* ITEM DE NOTIFICAÇÕES ATUALIZADO */}
+                <li onClick={() => { setShowNotifications(true); setHasUnread(false); }} style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FiBell /> Notificações
+                  </div>
+                  {(notifications.length > 0 && hasUnread) && <span className="notification-badge"></span>}
+                </li>
+
                 <li><FiUser /> Conta</li>
               </ul>
 
@@ -988,7 +1118,7 @@ export default function TelaGrupo() {
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onBlur={saveRename}
-                        onKeyDown={e => e.key === 'Enter' ? saveRename() : e.key === 'Escape' ? setEditingGroupId(null) : null}
+                        onKeyDown={e => e.key === 'Enter' ? e.target.blur() : e.key === 'Escape' ? setEditingGroupId(null) : null}
                         autoFocus
                         style={{ fontSize: '15px', fontWeight: 500, border: '1px solid #667467', borderRadius: 4, padding: '2px 4px', width: '100%' }}
                       />
@@ -1125,7 +1255,8 @@ export default function TelaGrupo() {
                                     value={t.descricao}
                                     onChange={e => setTarefas(prev => prev.map(task => task.id === t.id ? { ...task, descricao: e.target.value } : task))}
                                     onBlur={() => saveTask(t.id)}
-                                    onKeyDown={e => e.key === 'Enter' && saveTask(t.id)}
+                                    // CORREÇÃO AQUI: Apenas tira o foco, não chama saveTask duplicado
+                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                     autoFocus
                                   />
                                 ) : (
@@ -1254,7 +1385,8 @@ export default function TelaGrupo() {
                                     value={c.descricao}
                                     onChange={e => setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, descricao: e.target.value } : item))}
                                     onBlur={() => saveContaDetalhada(c.id)}
-                                    onKeyDown={e => e.key === 'Enter' && saveContaDetalhada(c.id)}
+                                    // CORREÇÃO AQUI
+                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                     autoFocus
                                   />
                                 ) : (
@@ -1282,6 +1414,8 @@ export default function TelaGrupo() {
                                   value={c.valor > 0 ? formatCurrency(c.valor) : ''}
                                   onChange={e => updateContaDetalhadaValor(c.id, e.target.value)}
                                   onBlur={() => saveContaDetalhada(c.id)}
+                                  // Adicionado blur para salvar no Enter
+                                  onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                   placeholder="R$ 0,00"
                                   style={{ width: 80, textAlign: 'right', fontFamily: 'monospace' }}
                                 />
@@ -1311,7 +1445,6 @@ export default function TelaGrupo() {
                                   onClick={() => {
                                      const newValue = !c.recorrente;
                                      setContasDetalhadas(prev => prev.map(item => item.id === c.id ? { ...item, recorrente: newValue } : item));
-                                     // Opcional: salvar imediatamente
                                   }}
                                 >
                                   {c.recorrente ? 'Sim' : 'Não'}
@@ -1388,7 +1521,8 @@ export default function TelaGrupo() {
                                     value={c.produto}
                                     onChange={e => setCompras(prev => prev.map(compra => compra.id === c.id ? { ...compra, produto: e.target.value } : compra))}
                                     onBlur={() => saveCompra(c.id)}
-                                    onKeyDown={e => e.key === 'Enter' && saveCompra(c.id)}
+                                    // CORREÇÃO AQUI
+                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                     autoFocus
                                   />
                                 ) : (
@@ -1415,6 +1549,8 @@ export default function TelaGrupo() {
                                   value={c.quantidade || 1}
                                   onChange={e => updateCompraQuantidade(c.id, e.target.value)}
                                   onBlur={() => saveCompra(c.id)}
+                                  // Adicionado blur para salvar no Enter
+                                  onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                   style={{ width: 50, textAlign: 'center', fontFamily: 'monospace' }}
                                 />
                               </td>
@@ -1425,6 +1561,8 @@ export default function TelaGrupo() {
                                   value={c.valor ? formatCurrency(parseFloat(c.valor)) : ''}
                                   onChange={e => updateCompraValor(c.id, e.target.value)}
                                   onBlur={() => saveCompra(c.id)}
+                                  // Adicionado blur para salvar no Enter
+                                  onKeyDown={e => e.key === 'Enter' && e.target.blur()}
                                   placeholder="R$ 0,00"
                                   style={{ width: 70, textAlign: 'right', fontFamily: 'monospace' }}
                                 />
@@ -1594,6 +1732,64 @@ export default function TelaGrupo() {
                     <span>Confirmar Escolha</span>
                 </button>
             </div>
+        </div>
+      )}
+
+      {/* POPUP: NOTIFICAÇÕES (NOVO) */}
+      {showNotifications && (
+        <div className="overlay" onClick={() => setShowNotifications(false)} style={{zIndex: 10002}}>
+          <div className="popup-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 className="popup-title" style={{ margin: 0, fontSize: '22px', textAlign: 'left' }}>
+                Notificações
+              </h2>
+              {notifications.length > 0 && (
+                <span 
+                  onClick={clearNotifications}
+                  style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Limpar tudo
+                </span>
+              )}
+            </div>
+
+            <div className="notif-list">
+              {notifications.length === 0 ? (
+                <div className="empty-state">
+                  <FiBell style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.3 }} /><br/>
+                  Nenhuma nova notificação
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className="notif-item">
+                    <div 
+                      className="notif-icon-box"
+                      style={{
+                        backgroundColor: n.tipo === 'tarefa' ? '#dbeafe' : n.type === 'compra' ? '#fee2e2' : '#f3e8ff',
+                        color: n.type === 'tarefa' ? '#2563eb' : n.type === 'compra' ? '#dc2626' : '#9333ea'
+                      }}
+                    >
+                      {n.tipo === 'tarefa' && <FiCheckSquare size={18} />}
+                      {n.tipo === 'compra' && <FiTag size={18} />}
+                      {n.tipo === 'conta' && <FiDollarSign size={18} />}
+                    </div>
+                    <div className="notif-content">
+                      <div className="notif-text">{n.mensagem}</div>
+                      <div className="notif-time">{n.time}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <button 
+              className="submitButton" 
+              style={{ marginTop: '24px', padding: '12px 0' }}
+              onClick={() => setShowNotifications(false)}
+            >
+              <span>Fechar</span>
+            </button>
+          </div>
         </div>
       )}
 
