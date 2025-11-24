@@ -121,6 +121,12 @@ export default function TelaGrupo() {
   const [userProfile, setUserProfile] = useState({ name: 'Jabuti de lago', image: '/p1.png' });
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
+  // NOVO: estado para membros do grupo
+  const [groupMembers, setGroupMembers] = useState({
+    total_usuarios: 0,
+    profile_images: [],
+  });
+
   // === REDIMENSIONAMENTO DE COLUNAS ===
   const [columnWidths, setColumnWidths] = useState({
     tarefas: [50, 220, 130, 110, 120, 70],
@@ -192,14 +198,34 @@ export default function TelaGrupo() {
       fetchTarefas(selectedGroup.id);
       fetchCompras(selectedGroup.id);
       fetchContas(selectedGroup.id);
+
+      // NOVO: buscar membros do grupo
+      fetchGroupMembers(selectedGroup.id);
     } else {
       setTarefas([]);
       setCompras([]);
       setContasDetalhadas([]);
       setNotifications([]);
+      setGroupMembers({ total_usuarios: 0, profile_images: [] });
       calcularDashboard();
     }
   }, [selectedGroup]);
+
+  // NOVA FUNÇÃO: buscar membros do grupo
+  const fetchGroupMembers = async (groupId) => {
+    try {
+      const res = await fetch(`${API_URL}/grupo/${groupId}/usuarios`);
+      if (!res.ok) throw new Error('Erro ao buscar membros do grupo');
+      const data = await res.json();
+      setGroupMembers({
+        total_usuarios: data.total_usuarios ?? 0,
+        profile_images: Array.isArray(data.profile_images) ? data.profile_images : [],
+      });
+    } catch (e) {
+      console.error('Erro ao carregar membros do grupo', e);
+      setGroupMembers({ total_usuarios: 0, profile_images: [] });
+    }
+  };
 
   useEffect(() => {
     if (!selectedGroup) return;
@@ -1154,10 +1180,26 @@ export default function TelaGrupo() {
                       <h1 className="group-name">{selectedGroup.name}</h1>
                       <div className="members-line">
                         <div className="profile-stack">
-                          <img src="/p1.png" alt="p1" className="profile-img" />
-                          <img src="/p2.png" alt="p2" className="profile-img" />
+                          {/* USO DOS MEMBROS DO GRUPO */}
+                          {(groupMembers.profile_images && groupMembers.profile_images.length > 0
+                            ? groupMembers.profile_images
+                            : ['/p1.png', '/p2.png'] // fallback
+                          )
+                            .slice(0, 5)
+                            .map((img, idx) => (
+                              <img
+                                key={idx}
+                                src={img || '/fotodeperfil.png'}
+                                alt={`membro-${idx}`}
+                                className="profile-img"
+                              />
+                            ))}
                         </div>
-                        <span>Membros do grupo</span>
+                        <span>
+                          {groupMembers.total_usuarios > 0
+                            ? `${groupMembers.total_usuarios} membro${groupMembers.total_usuarios > 1 ? 's' : ''} do grupo`
+                            : 'Membros do grupo'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1519,6 +1561,7 @@ export default function TelaGrupo() {
                                     type="text"
                                     className="edit-input"
                                     value={c.produto}
+                                   
                                     onChange={e => setCompras(prev => prev.map(compra => compra.id === c.id ? { ...compra, produto: e.target.value } : compra))}
                                     onBlur={() => saveCompra(c.id)}
                                     // CORREÇÃO AQUI

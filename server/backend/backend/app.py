@@ -18,7 +18,15 @@ from .schemas import (
     NotificacaoCreate,
     NotificacaoResponse
 )
-from .user import cadastrar_usuario, login_usuario, editar_usuario, atualizar_grupo_usuario, obter_usuario, atualizar_avatar_usuario
+from .user import (
+    cadastrar_usuario, 
+    login_usuario, 
+    editar_usuario, 
+    atualizar_grupo_usuario, 
+    obter_usuario, 
+    atualizar_avatar_usuario,
+    contar_usuarios_no_grupo as contar_usuarios_no_grupo_service,  # <- alias para evitar conflito de nome
+)
 from .social_auth import get_oauth_url, login_social 
 from .notificacoes import criar_notificacao, listar_notificacoes, deletar_todas_notificacoes
 
@@ -117,6 +125,14 @@ def atualizar_grupo_do_usuario(id_user: str, grupo_id: int | None = Query(None, 
     Envie um grupo_id válido para vincular, ou deixe como null/None para remover o vínculo.
     """
     return atualizar_grupo_usuario(id_user, grupo_id)
+
+@app.get("/grupo/{grupo_id}/usuarios", response_model=dict, tags=["Grupo"])
+def obter_usuarios_do_grupo(grupo_id: int):
+    """
+    Retorna total de usuários e lista de imagens de perfil (image)
+    para um grupo específico.
+    """
+    return contar_usuarios_no_grupo_service(grupo_id)
 
 # ==================== Rotas de Autenticação Social ====================
 # Rotas descomentadas e funcionais
