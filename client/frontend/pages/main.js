@@ -870,6 +870,34 @@ export default function TelaGrupo() {
       setGroups([]); setSelectedGroup(null); setShowCreateGroup(true); setContextMenu(null);
   };
 
+  // Função para mostrar o código de convite atual do grupo
+  const handleShare = async () => {
+    if (!selectedGroup) return;
+
+    try {
+      const resGet = await fetch(`${API_URL}/grupo/${selectedGroup.id}`);
+      const dataGet = await resGet.json();
+
+      if (!resGet.ok || !dataGet.data) {
+        console.error('Erro ao obter grupo para compartilhar', dataGet);
+        return;
+      }
+
+      const grupoAtual = dataGet.data;
+      const codigo = grupoAtual.cod_convite;
+
+      if (!codigo) {
+        console.warn('Grupo não possui cod_convite definido no backend.');
+        return;
+      }
+
+      setGeneratedCode(String(codigo));
+      setShowInviteCode(true);
+    } catch (e) {
+      console.error('Erro no fluxo de compartilhamento do grupo', e);
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => mainRef.current && setScrolled(mainRef.current.scrollTop > 0);
     mainRef.current?.addEventListener('scroll', handleScroll);
@@ -1169,7 +1197,7 @@ export default function TelaGrupo() {
                   <div className="header-actions">
                     <img src="/editar.png" alt="editar" />
                     <img src="/favoritar.png" alt="favoritar" />
-                    <span className="share-text">Share</span>
+                    <span className="share-text" onClick={handleShare}>Share</span>
                   </div>
                 </div>
 
@@ -1561,7 +1589,6 @@ export default function TelaGrupo() {
                                     type="text"
                                     className="edit-input"
                                     value={c.produto}
-                                   
                                     onChange={e => setCompras(prev => prev.map(compra => compra.id === c.id ? { ...compra, produto: e.target.value } : compra))}
                                     onBlur={() => saveCompra(c.id)}
                                     // CORREÇÃO AQUI
