@@ -18,6 +18,7 @@ def criar_tarefa(task: TarefasBase):
             "status": task.status,
             "recorrente": task.recorrente,
             "responsavel": task.responsavel,
+            "group_id": task.grupo_id,  # usa coluna group_id na tabela
             "created_at": datetime.now().isoformat(),
             "update_at": datetime.now().isoformat()
         }
@@ -36,7 +37,6 @@ def criar_tarefa(task: TarefasBase):
         # Propaga a HTTPException (400)
         raise
     except Exception as e:
-        # Captura erros inesperados (rede, DB, etc.) e os trata como 500
         logger.error(f"Erro ao criar Tarefa: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -48,9 +48,18 @@ def listar_tarefas(skip: int = 0, limit: int = 100, filtros: dict = None):
     try:
         query = supabase.table("task_data").select("*")
         
-        # Aplicar filtros se fornecidos
+        # Normalizar filtro vindo da rota (?id_group=)
         if filtros:
-            for key, value in filtros.items():
+            # garantir que estamos trabalhando com um dict simples
+            filtros_norm = dict(filtros)
+            # se vier id_group do endpoint, converte para coluna group_id
+            if "id_group" in filtros_norm and filtros_norm["id_group"] is not None:
+                try:
+                    filtros_norm["group_id"] = int(filtros_norm.pop("id_group"))
+                except (ValueError, TypeError):
+                    filtros_norm.pop("id_group", None)
+            # aplicar todos os filtros normalizados
+            for key, value in filtros_norm.items():
                 if value is not None:
                     query = query.eq(key, value)
         
@@ -105,6 +114,7 @@ def atualizar_tarefa(tarefa_id: int, task: TarefasBase):
             "status": task.status,
             "recorrente": task.recorrente,
             "responsavel": task.responsavel,
+            "group_id": task.grupo_id,  # manter vínculo com group_id
             "update_at": datetime.now().isoformat()
         }
         
@@ -146,3 +156,4 @@ def excluir_tarefa(tarefa_id: int):
             status_code=500,
             detail=f"Erro inesperado ao excluir tarefa: {str(e)}"
         )
+

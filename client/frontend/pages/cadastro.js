@@ -18,7 +18,11 @@ export default function Cadastro() {
     '/images/profile1.png',
     '/images/profile2.png',
     '/images/profile3.png',
-    '/images/profile4.png'
+    '/images/profile4.png',
+    '/images/profile5.png',
+    '/images/profile6.png',
+    '/images/profile7.png',
+    '/images/profile8.png'
   ];
 
   const nextProfileImage = () => {
