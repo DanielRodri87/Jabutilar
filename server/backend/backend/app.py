@@ -1,7 +1,12 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
+
 from .social_auth import process_social_callback
 
 from .schemas import (
@@ -16,7 +21,8 @@ from .schemas import (
     SocialAuthRequest,
     AvatarUpdate,
     NotificacaoCreate,
-    NotificacaoResponse
+    NotificacaoResponse,
+    ContatoRequest  # Importado aqui
 )
 from .user import (
     cadastrar_usuario, 
@@ -25,7 +31,7 @@ from .user import (
     atualizar_grupo_usuario, 
     obter_usuario, 
     atualizar_avatar_usuario,
-    contar_usuarios_no_grupo as contar_usuarios_no_grupo_service,  # <- alias para evitar conflito de nome
+    contar_usuarios_no_grupo as contar_usuarios_no_grupo_service,
 )
 from .social_auth import get_oauth_url, login_social 
 from .notificacoes import criar_notificacao, listar_notificacoes, deletar_todas_notificacoes
@@ -66,8 +72,6 @@ from .contas import (
 class CallbackRequest(BaseModel):
     code: str
 
-from typing import List, Optional
-
 app = FastAPI(
     title="API Backend",
     description="API para gerenciamento de usuários e itens de compra",
@@ -81,6 +85,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==================== Rota de Contato (Novo) ====================
+@app.post("/contato", tags=["Contato"])
+def enviar_contato(req: ContatoRequest):
+    """Envia email de contato"""
+    sender_email = "ritarodriguesilva19@gmail.com"
+    password = os.getenv("EMAIL_PASSWORD", "urch kqih kkew nrob") 
+    
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = req.email
+    msg['Subject'] = "Atendimento JabutiLar"
+    
+    body = f"Olá, {req.primeiro_nome} {req.segundo_nome} em que podemos ajudar?"
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        # Configuração para Gmail (TLS)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, password)
+        text = msg.as_string()
+        server.sendmail(sender_email, req.email, text)
+        server.quit()
+        return {"message": "Email enviado com sucesso"}
+    except Exception as e:
+        print(f"Erro ao enviar email: {e}")
+        # Retorna erro 500 para o frontend saber que falhou
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar email: {str(e)}")
 
 # ==================== Rotas de Autenticação ====================
 @app.post("/cadastro", tags=["Autenticação"])
@@ -102,7 +135,6 @@ def callback_social(req: CallbackRequest):
     """
     Processa o código retornado pelo provedor (Facebook/Google)
     """
-    from .social_auth import process_social_callback # Importação local para evitar ciclo se necessário
     return process_social_callback(req.code)
 
 @app.get("/usuario/{id_user}", response_model=dict, tags=["Autenticação"])
@@ -135,7 +167,6 @@ def obter_usuarios_do_grupo(grupo_id: int):
     return contar_usuarios_no_grupo_service(grupo_id)
 
 # ==================== Rotas de Autenticação Social ====================
-# Rotas descomentadas e funcionais
 @app.get("/auth/{provider}/url", tags=["Autenticação Social"])
 def obter_url_oauth(provider: str):
     """
@@ -192,7 +223,7 @@ def criar_task(item: TarefasBase):
     return criar_tarefa(item)
 
 @app.get("/tarefa", response_model=dict, tags=["Tarefa"])
-def listar_itens():
+def listar_itens_tarefa():
     """Listar todos as Tarefas"""
     return listar_tarefas()
 
@@ -202,12 +233,12 @@ def obter_tarefas(task_id: int):
     return obter_tarefa(task_id)
 
 @app.put("/tarefa/{task_id}", response_model=dict, tags=["Tarefa"])
-def atualizar_item(task_id: int, task: TarefasBase):
+def atualizar_tarefa_item(task_id: int, task: TarefasBase):
     """Atualizar uma Tarefa existente"""
     return atualizar_tarefa(task_id, task)
 
 @app.delete("/tarefa/{item_id}", response_model=dict, tags=["Tarefa"])
-def deletar_item(item_id: int):
+def deletar_tarefa_item(item_id: int):
     """Deletar uma Tarefa"""
     return excluir_tarefa(item_id)
 
@@ -260,10 +291,6 @@ def atualizar_dados_conta(conta_id: int, conta: ContasBase):
     """Atualizar uma conta existente"""
     return atualizar_conta(conta_id, conta)
 
-@app.delete("/conta/{conta_id}", response_model=dict, tags=["Conta"])
-def excluir_dados_conta(conta_id: int):
-    """Excluir uma conta existente"""
-    return deletar_conta(conta_id)
 @app.delete("/conta/{conta_id}", response_model=dict, tags=["Conta"])
 def excluir_dados_conta(conta_id: int):
     """Excluir uma conta existente"""

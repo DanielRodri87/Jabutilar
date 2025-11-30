@@ -29,6 +29,13 @@ class SocialAuthRequest(BaseModel):
     nome: Optional[str] = None
     username: Optional[str] = None
 
+# ==================== CONTATO ====================
+class ContatoRequest(BaseModel):
+    primeiro_nome: str
+    segundo_nome: str
+    celular: str
+    email: str
+
 # ==================== ITENS DE COMPRA ====================
 class ItemCompraBase(BaseModel):
     nome: str

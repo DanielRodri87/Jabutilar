@@ -9,6 +9,10 @@ export default function Login() {
         facebook: false
     });
 
+    // Estado para o formulário de contato
+    const [contactLoading, setContactLoading] = useState(false);
+    const [contactMessage, setContactMessage] = useState({ text: '', type: '' });
+
     const EXIT_DURATION = 900;
     const ENTER_DURATION = 1000;
     const DISPLAY_INTERVAL = 6000;
@@ -127,6 +131,48 @@ export default function Login() {
             setErrorMessage('Erro ao conectar com o servidor. Tente novamente mais tarde.');
         } finally {
             setIsLoading(false);
+        }
+    }
+
+    // Função para o formulário de Contato
+    async function handleContactSubmit(event) {
+        event.preventDefault();
+        setContactLoading(true);
+        setContactMessage({ text: '', type: '' });
+
+        const formData = new FormData(event.target);
+        const primeiroNome = formData.get('primeiroNome');
+        const segundoNome = formData.get('segundoNome');
+        const celular = formData.get('celular');
+        const email = formData.get('email');
+
+        try {
+            const response = await fetch(apiEndpoints.contato, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    primeiro_nome: primeiroNome,
+                    segundo_nome: segundoNome,
+                    celular: celular,
+                    email: email
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setContactMessage({ text: 'E-mail enviado com sucesso!', type: 'success' });
+                event.target.reset();
+            } else {
+                setContactMessage({ text: 'Erro ao enviar e-mail. Tente novamente.', type: 'error' });
+            }
+        } catch (error) {
+            console.error('Erro no envio de contato:', error);
+            setContactMessage({ text: 'Erro de conexão.', type: 'error' });
+        } finally {
+            setContactLoading(false);
         }
     }
 
@@ -684,6 +730,27 @@ export default function Login() {
                     align-items: center;
                     padding-top: 12px;
                 }
+                
+                .contact-message {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding: 10px;
+                    border-radius: 5px;
+                    font-size: 14px;
+                    font-family: 'Airbnb Cereal', sans-serif;
+                }
+                
+                .contact-message.success {
+                    background-color: #dcfce7;
+                    color: #166534;
+                    border: 1px solid #bbf7d0;
+                }
+                
+                .contact-message.error {
+                    background-color: #fee2e2;
+                    color: #991b1b;
+                    border: 1px solid #fecaca;
+                }
 
                 .reviews-container {
                     position: relative;
@@ -1098,7 +1165,14 @@ export default function Login() {
                         Estamos prontos — fale conosco e transforme suas ideias em ação!
                     </p>
 
-                    <form className="form" onSubmit={(e) => e.preventDefault()}>
+                    {/* Exibe mensagem de erro ou sucesso */}
+                    {contactMessage.text && (
+                        <div className={`contact-message ${contactMessage.type}`}>
+                            {contactMessage.text}
+                        </div>
+                    )}
+
+                    <form className="form" onSubmit={handleContactSubmit}>
                         <div className="namesRow">
                         <div className="inputWrapper">
                             <span className="floatingLabel">PRIMEIRO NOME</span>
@@ -1108,6 +1182,7 @@ export default function Login() {
                             className="input"
                             placeholder="Digite o seu nome aqui"
                             required
+                            disabled={contactLoading}
                             />
                         </div>
                         <div className="inputWrapper">
@@ -1118,6 +1193,7 @@ export default function Login() {
                             className="input"
                             placeholder="Digite seu sobrenome aqui"
                             required
+                            disabled={contactLoading}
                             />
                         </div>
                         </div>
@@ -1137,6 +1213,7 @@ export default function Login() {
                                 className="phoneInput phoneInputInner tallPhoneInput loweredPhoneInput"
                                 placeholder="Informe seu telefone com DDD"
                                 required
+                                disabled={contactLoading}
                                 />
                             </div>
                             </div>
@@ -1152,13 +1229,14 @@ export default function Login() {
                             className="input"
                             placeholder="Digite o seu email aqui"
                             required
+                            disabled={contactLoading}
                             />
                         </div>
                         </div>
 
                         <div className="buttonContainer">
-                        <button type="submit" className="submitButton">
-                            <span>Enviar</span>
+                        <button type="submit" className="submitButton" disabled={contactLoading}>
+                            <span>{contactLoading ? 'Enviando...' : 'Enviar'}</span>
                         </button>
                         </div>
                     </form>
