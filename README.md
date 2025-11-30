@@ -44,7 +44,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/Jabutilar.git
+   git clone https://github.com/DanielRodri87/Jabutilar
    cd Jabutilar
    ```
 
