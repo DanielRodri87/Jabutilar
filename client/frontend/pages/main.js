@@ -2023,15 +2023,6 @@ export default function TelaGrupo() {
           </div>
         </div>
       )}
-
-      {userIdDebug && (
-        <div style={{
-          position: 'fixed', bottom: 8, right: 8, background: '#111', color: '#fff',
-          padding: '6px 10px', borderRadius: 8, fontSize: 12, zIndex: 9999, fontFamily: 'monospace'
-        }}>
-          UID: {userIdDebug}
-        </div>
-      )}
     </>
   );
 }
