@@ -1,6 +1,6 @@
 # 🐢 Jabutilar
 
-![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow)
+![Status do Projeto](https://img.shields.io/badge/Status-Concluído-green)
 ![Next.js](https://img.shields.io/badge/Next.js-15.0-black)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.116-green)
@@ -59,7 +59,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 
 3. Acesse a aplicação:
    - **Frontend:** [http://localhost:3000](http://localhost:3000)
-   - **Backend API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs) (ajuste a porta se necessário)
+   - **Backend API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### Outros comandos úteis
 
